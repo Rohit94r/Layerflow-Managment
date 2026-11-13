@@ -29,14 +29,31 @@ Not a Jira, Notion, Stripe, or analytics replacement. Not every integration. Not
 
 ## 2. Current state of the repository
 
-| Item | State |
+| Item | State (13 Nov 2026) |
 |---|---|
-| Application code | None yet. The repository holds only the vision document and this plan. |
-| Stack | Not scaffolded. Section 3 is the chosen stack for a fresh build. |
-| Design template | **Not received.** Section 9 is a provisional design system and must be reconciled with the template before UI work starts. |
-| Product name | Undecided. Code uses the neutral name `product-os`; nothing user-facing is hardcoded. |
+| Stages shipped | Stage 0 (scaffold) and Stage 1 (core foundation) complete. Stage 2 (work and knowledge) and a first slice of Stage 5 (costs, renewals, manual revenue) shipped early because they make the portfolio usable day to day. |
+| Stack | Next.js 16, React 19, TypeScript, Tailwind 4, Drizzle 0.45, Better Auth 1.7, Zod 4. See §3 for deviations from the original plan. |
+| Database | Embedded PGlite (real Postgres in WASM) when `DATABASE_URL` is empty; any Postgres/Neon URL in staging and production. Same migrations for both. |
+| Design | Finalised from the supplied "Corniche" reference: cream paper, cobalt ink, navy serif type. See §9. |
+| Product name | Working name **LayerFlow OS**, set in one place: `src/lib/brand.ts`. |
+| Quality gates | `pnpm lint`, `pnpm typecheck`, `pnpm test` (19 tests: tenant isolation, permissions, domain rules), `pnpm build`. All passing. |
 
-Because the repository is empty, Stage 0 of the master prompt (audit the existing code) reduces to scaffolding. If existing LayerFlow code is later brought in, run the full audit before merging it.
+### What works today
+
+- Email and password sign-up and sign-in, sessions, sign-out.
+- Workspaces: create, switch, rename, change address, timezone and currency, delete with typed confirmation.
+- Members: invite by single-use link (7-day expiry, bound to the invited email), seven roles, change role, remove, leave. The last owner is protected.
+- Product registry: create, edit, archive, restore, delete (archive first), pin, groups, parent/child products, links, tech stack, tags, review dates.
+- Five independent classification fields (role, stage, priority, focus, health with reason), editable inline from the table and product page, plus bulk edit.
+- Portfolio views: table (desktop) and cards, filters for every dimension, search, sorting, an archived view, and shareable URL state.
+- Command center: setup checklist, key counts, lifecycle pipeline, rule-based "needs attention" list, products in focus, my work, upcoming renewals, decisions to revisit, recent activity.
+- Work: tasks and bugs with per-workspace numbers (#1, #2…), a drag-and-drop board, a list with inline edits, filters, task detail with Markdown, comments and history.
+- Docs and decisions: PRD, decision, runbook, meeting and research templates, Markdown, status, revisit dates, per-product docs.
+- Finance: costs and subscriptions per product, monthly run-rate per currency (never silently converted), renewal tracking with "mark renewed", estimates flagged, manual revenue clearly labelled, and "Not recorded" shown instead of zero.
+- Audit log of every change, with actor and field-level diff; workspace and per-product activity feeds.
+- Command palette (Ctrl/Cmd+K) with permission-aware search across products, tasks and docs.
+- Full JSON export of a workspace.
+- Light, dark and system themes; responsive down to phone width; keyboard accessible.
 
 ---
 
@@ -65,6 +82,17 @@ One choice per concern. Versions are pinned to the latest stable release at scaf
 | Hosting | Vercel (app) + Neon (database) + Inngest Cloud (jobs) | |
 
 **Deliberately left out for now:** Redis, a vector database, microservices, a separate backend service, Kubernetes. Each is added only when a measured problem requires it.
+
+### 3.1 What changed during the first build
+
+| Planned | Built | Why |
+|---|---|---|
+| tRPC | Next.js server actions plus two REST route handlers (search, export) | Same end-to-end types with less code; every action still goes through a typed, permission-checked service. Revisit if a public API is needed. |
+| Neon for every environment | PGlite locally, Postgres/Neon via `DATABASE_URL` elsewhere | Zero-setup local development and fast in-memory tests on a real Postgres engine. |
+| Inngest from Stage 0 | Not added yet | No background work exists until integrations (Stage 3). Added with the first sync job. |
+| Full-text search | `ILIKE` search, permission-aware | Enough for current data volumes; full-text indexes are added when search quality or speed demands it. |
+| Row-level security in Stage 1 | Service-layer scoping plus cross-tenant tests; RLS not yet enabled | Every query is scoped by `workspace_id` and tested. RLS is the next hardening step before outside users are onboarded. |
+| shadcn/ui | Hand-built components on design tokens | Smaller surface, matched to the Corniche style. |
 
 ---
 
@@ -117,14 +145,14 @@ These rules are enforced by ESLint import boundaries, not by convention.
 The workspace is the tenant. This is the most important security property in the system.
 
 - Every tenant-owned table has a non-null `workspace_id` with an index.
-- Services receive a `ctx` object (`userId`, `workspaceId`, `role`) and use a workspace-scoped query helper that adds the `workspace_id` filter. Raw unscoped queries are lint-blocked outside `src/server/db`.
-- PostgreSQL row-level security is enabled on tenant tables as a second layer, keyed on a per-transaction setting.
+- Services receive a `ctx` object (`userId`, `workspaceId`, `role`) and filter every query by `workspace_id`. Every id a user submits (owner, assignee, product, parent, group) is checked to belong to the same workspace before it is stored. UI code is lint-blocked from importing the database client.
+- PostgreSQL row-level security on tenant tables is the planned second layer (not yet enabled; see §3.1).
 - Jobs, webhooks, and agent tool calls carry `workspaceId` and re-check permission at execution time. A job is never trusted because it was queued by an authorized user.
 - An automated test suite attempts cross-workspace reads and writes on every router and must fail to access anything.
 
 ### 4.4 Permissions
 
-Roles: Owner, Admin, Manager, Member, Viewer, Guest, Billing Manager. Permissions are named capabilities (`product.edit`, `finance.view`, `integration.connect`, `agent.run`). Roles map to capability sets in one file. Every tRPC procedure declares the capability it needs; a procedure with no declared capability fails the build.
+Roles: Owner, Admin, Manager, Member, Viewer, Guest, Billing Manager. Permissions are named capabilities (`product.edit`, `finance.view`, `members.manage`, `data.export`). Roles map to capability sets in one file, `src/server/permissions/index.ts`. Every service function calls `assertCan(ctx, capability)` before doing anything, so a check can't be bypassed by calling a different page or action.
 
 ### 4.5 Data honesty
 
