@@ -10,6 +10,9 @@ export default async function OnboardingPage({ searchParams }: PageProps<"/onboa
   const user = await requireUser();
   const sp = await searchParams;
   const workspaces = await listUserWorkspaces(user.id);
+  if (workspaces.length && typeof sp.integration_error === "string") {
+    redirect(`/w/${workspaces[0]!.slug}/integrations?error=${encodeURIComponent(sp.integration_error)}`);
+  }
   if (workspaces.length && !sp.new) redirect(`/w/${workspaces[0]!.slug}`);
 
   return (

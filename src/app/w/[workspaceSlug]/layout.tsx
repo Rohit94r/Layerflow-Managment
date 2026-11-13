@@ -18,7 +18,10 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps<
       workspaces={workspaces}
       products={products}
       user={{ name: ctx.user.name, email: ctx.user.email }}
-      caps={{ finance: can(ctx, "finance.view"), audit: can(ctx, "audit.view") }}
+      caps={{
+        finance: can(ctx, "finance.view"), audit: can(ctx, "audit.view"), seo: can(ctx, "seo.view"), planning: can(ctx, "planning.view"),
+        automation: can(ctx, "automation.view"), agents: can(ctx, "agent.view"), integrations: can(ctx, "integration.view"),
+      }}
     >
       {children}
     </Shell>

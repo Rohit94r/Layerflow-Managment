@@ -71,6 +71,9 @@ export const workspace = pgTable("workspace", {
   timezone: text("timezone").notNull().default("UTC"),
   currency: text("currency").notNull().default("USD"),
   taskCounter: integer("task_counter").notNull().default(0),
+  // Global kill switches (master prompt §15, §16.7).
+  automationsPaused: boolean("automations_paused").notNull().default(false),
+  agentsPaused: boolean("agents_paused").notNull().default(false),
   createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

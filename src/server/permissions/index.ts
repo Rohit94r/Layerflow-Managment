@@ -20,6 +20,18 @@ export const CAPABILITIES = [
   "finance.edit",
   "audit.view",
   "data.export",
+  "integration.view",
+  "integration.manage",
+  "seo.view",
+  "seo.run",
+  "planning.view",
+  "planning.edit",
+  "automation.view",
+  "automation.manage",
+  "agent.view",
+  "agent.manage",
+  "agent.run",
+  "approval.decide",
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 
@@ -33,15 +45,21 @@ export const ROLE_CAPABILITIES: Record<Role, Set<Capability>> = {
   manager: set(
     "workspace.view", "members.view", "product.view", "product.create", "product.edit", "product.archive",
     "product.delete", "work.view", "work.edit", "docs.view", "docs.edit", "finance.view", "finance.edit",
-    "audit.view", "data.export",
+    "audit.view", "data.export", "integration.view", "integration.manage", "seo.view", "seo.run",
+    "planning.view", "planning.edit", "automation.view", "automation.manage", "agent.view", "agent.manage",
+    "agent.run", "approval.decide",
   ),
   member: set(
     "workspace.view", "members.view", "product.view", "product.create", "product.edit", "work.view", "work.edit",
-    "docs.view", "docs.edit", "audit.view",
+    "docs.view", "docs.edit", "audit.view", "integration.view", "seo.view", "seo.run", "planning.view",
+    "planning.edit", "automation.view", "agent.view", "agent.run",
   ),
-  viewer: set("workspace.view", "members.view", "product.view", "work.view", "docs.view", "audit.view"),
-  guest: set("workspace.view", "product.view", "work.view"),
-  billing: set("workspace.view", "members.view", "product.view", "finance.view", "finance.edit"),
+  viewer: set(
+    "workspace.view", "members.view", "product.view", "work.view", "docs.view", "audit.view", "integration.view",
+    "seo.view", "planning.view", "automation.view", "agent.view",
+  ),
+  guest: set("workspace.view", "product.view", "work.view", "planning.view"),
+  billing: set("workspace.view", "members.view", "product.view", "finance.view", "finance.edit", "planning.view"),
 };
 
 export function roleCan(role: Role, cap: Capability) {
@@ -54,6 +72,8 @@ export type Ctx = {
   workspaceId: string;
   workspaceSlug: string;
   role: Role;
+  /** Who is really acting. Automations and agents act on behalf of their owner but are audited as themselves. */
+  actor?: "human" | "system" | "agent";
 };
 
 export function can(ctx: Ctx, cap: Capability) {

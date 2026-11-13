@@ -202,6 +202,6 @@ export function NoAccess({ what = "this page" }: { what?: string }) {
 }
 
 /** Labelled data provenance, per the "every metric shows its source" rule. */
-export function SourceNote({ children }: { children: React.ReactNode }) {
-  return <p className="mt-2 text-[11.5px] text-muted">{children}</p>;
+export function SourceNote({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <p className={cn("mt-2 text-[11.5px] text-muted", className)}>{children}</p>;
 }

@@ -1,11 +1,11 @@
-export const DOC_KINDS = ["doc", "decision", "prd", "runbook", "meeting", "research"] as const;
+export const DOC_KINDS = ["doc", "decision", "prd", "runbook", "meeting", "research", "report"] as const;
 export const DOC_STATUSES = ["draft", "active", "superseded", "archived"] as const;
 export type DocKind = (typeof DOC_KINDS)[number];
 export type DocStatus = (typeof DOC_STATUSES)[number];
 
 export const DOC_LABELS: Record<string, string> = {
   doc: "Document", decision: "Decision", prd: "PRD", runbook: "Runbook", meeting: "Meeting notes",
-  research: "Research", draft: "Draft", active: "Active", superseded: "Superseded", archived: "Archived",
+  research: "Research", report: "Report", draft: "Draft", active: "Active", superseded: "Superseded", archived: "Archived",
 };
 export const docLabel = (v: string) => DOC_LABELS[v] ?? v;
 
@@ -18,4 +18,5 @@ export const DOC_TEMPLATES: Record<DocKind, string> = {
   runbook: "## When to use this\n\n\n## Steps\n\n1. \n\n## Rollback\n\n\n## Contacts\n\n",
   meeting: "## Attendees\n\n\n## Notes\n\n\n## Decisions\n\n\n## Action items\n\n- [ ] \n",
   research: "## Question\n\n\n## Method\n\n\n## Findings\n\n\n## Implications\n\n",
+  report: "## Summary\n\n\n## Details\n\n",
 };

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
-  Activity, BookOpen, Check, ChevronsUpDown, CircleDollarSign, FileText, Home, LayoutGrid, ListChecks, LogOut,
-  Menu, Moon, Plus, Search, Settings, Sun, SunMoon, X,
+  Activity, BookOpen, Bot, Check, ChevronsUpDown, CircleDollarSign, FileText, Home, Inbox, LayoutGrid, ListChecks, LogOut,
+  Map as MapIcon, Menu, Moon, Plug, Plus, Search, Settings, Sun, SunMoon, TrendingUp, Workflow, X,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/format";
@@ -19,7 +19,8 @@ export type ShellProps = {
   workspaces: { slug: string; name: string; role: string }[];
   products: { slug: string; name: string; brandColor: string; pinned: boolean }[];
   user: { name: string; email: string };
-  caps: { finance: boolean; audit: boolean };
+  caps: { finance: boolean; audit: boolean; seo: boolean; planning: boolean; automation: boolean; agents: boolean; integrations: boolean };
+  inboxCount?: number;
   children: React.ReactNode;
 };
 
@@ -75,10 +76,16 @@ function Sidebar({ slug, workspaceName, workspaces, products, user, caps }: Shel
   const base = `/w/${slug}`;
   const nav: Nav[] = [
     { href: base, label: "Command center", icon: Home, exact: true },
+    { href: `${base}/inbox`, label: "Inbox", icon: Inbox },
     { href: `${base}/products`, label: "Portfolio", icon: LayoutGrid },
     { href: `${base}/work`, label: "Work", icon: ListChecks },
+    ...(caps.planning ? [{ href: `${base}/roadmap`, label: "Roadmap & goals", icon: MapIcon }] : []),
     { href: `${base}/docs`, label: "Docs & decisions", icon: BookOpen },
+    ...(caps.seo ? [{ href: `${base}/seo`, label: "SEO", icon: TrendingUp }] : []),
     ...(caps.finance ? [{ href: `${base}/finance`, label: "Finance", icon: CircleDollarSign }] : []),
+    ...(caps.automation ? [{ href: `${base}/automations`, label: "Automations", icon: Workflow }] : []),
+    ...(caps.agents ? [{ href: `${base}/agents`, label: "Agents", icon: Bot }] : []),
+    ...(caps.integrations ? [{ href: `${base}/integrations`, label: "Integrations", icon: Plug }] : []),
     ...(caps.audit ? [{ href: `${base}/activity`, label: "Activity", icon: Activity }] : []),
     { href: `${base}/settings`, label: "Settings", icon: Settings },
   ];

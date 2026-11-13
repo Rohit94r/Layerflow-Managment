@@ -31,12 +31,13 @@ Not a Jira, Notion, Stripe, or analytics replacement. Not every integration. Not
 
 | Item | State (13 Nov 2026) |
 |---|---|
-| Stages shipped | Stage 0 (scaffold) and Stage 1 (core foundation) complete. Stage 2 (work and knowledge) and a first slice of Stage 5 (costs, renewals, manual revenue) shipped early because they make the portfolio usable day to day. |
+| Stages shipped | First working slice of every stage, 0–7: core, work and knowledge, integrations (Google Search Console), SEO and intelligence, finance and operations, automation, Agent Operations Center. Stage 8 (sprints, CRM, visual workflow builder) is not started. Each stage's depth is listed below; "shipped" means working and tested, not feature-complete against the master prompt. |
 | Stack | Next.js 16, React 19, TypeScript, Tailwind 4, Drizzle 0.45, Better Auth 1.7, Zod 4. See §3 for deviations from the original plan. |
 | Database | Embedded PGlite (real Postgres in WASM) when `DATABASE_URL` is empty; any Postgres/Neon URL in staging and production. Same migrations for both. |
 | Design | Finalised from the supplied "Corniche" reference: cream paper, cobalt ink, navy serif type. See §9. |
 | Product name | Working name **LayerFlow OS**, set in one place: `src/lib/brand.ts`. |
-| Quality gates | `pnpm lint`, `pnpm typecheck`, `pnpm test` (19 tests: tenant isolation, permissions, domain rules), `pnpm build`. All passing. |
+| Quality gates | `pnpm lint`, `pnpm typecheck`, `pnpm test` (32 tests: tenant isolation, permissions, domain rules, SEO rules, SSRF guard, encryption, automation idempotency, approvals, agent tool authorisation), `pnpm build`. All passing. |
+| Needs configuration | Google Search Console (`GOOGLE_CLIENT_ID/SECRET`), agents (`ANTHROPIC_API_KEY`), scheduler (`CRON_SECRET`), production token key (`TOKEN_ENCRYPTION_KEY`). Without them those features show a setup state; everything else works. See `.env.example`. |
 
 ### What works today
 
@@ -52,8 +53,39 @@ Not a Jira, Notion, Stripe, or analytics replacement. Not every integration. Not
 - Finance: costs and subscriptions per product, monthly run-rate per currency (never silently converted), renewal tracking with "mark renewed", estimates flagged, manual revenue clearly labelled, and "Not recorded" shown instead of zero.
 - Audit log of every change, with actor and field-level diff; workspace and per-product activity feeds.
 - Command palette (Ctrl/Cmd+K) with permission-aware search across products, tasks and docs.
-- Full JSON export of a workspace.
+- Full JSON export of a workspace (tokens never included).
 - Light, dark and system themes; responsive down to phone width; keyboard accessible.
+
+**Integrations and SEO (Stages 3–4)**
+
+- Integration catalog with honest states (available, needs server setup, planned) and per-provider purpose, scopes, stored data and sync policy.
+- Google Search Console: OAuth web flow with signed state + PKCE, read-only scope, AES-256-GCM encrypted tokens, automatic refresh, `needs_reauth` detection, property discovery, explicit property → product mapping, sync runs with history, disconnect that revokes at Google with a keep-or-delete-data choice.
+- SEO dashboard per product and portfolio: clicks, impressions, CTR, average position for the last 28 days vs the previous 28, a daily trend chart (one metric at a time, table view), top queries and pages with movement, devices and countries, source/period/freshness labels.
+- Deterministic SEO opportunities (high impressions + low CTR, striking distance, declining pages and queries) with evidence, confidence and next action; insight → task carries the evidence; resolved insights are kept, not deleted.
+- Technical audit crawler: same-origin, robots.txt respected, 25-page cap, polite delay, SSRF-guarded; checks status, redirects, speed, title, description, H1, canonical, noindex, lang, Open Graph, structured data, image alt, duplicate titles, sitemap, HTTPS, HSTS. Labelled as crawler observations, not Google indexing facts.
+- Uptime checks performed by the server (manual + scheduled) with availability, median latency, recent history and TLS certificate expiry.
+
+**Planning, finance and operations (Stages 2 and 5)**
+
+- Now / Next / Later roadmap per product and portfolio, with confidence and target dates.
+- Goals with start/target/current values, check-ins, and status derived from progress vs elapsed time.
+- Monthly budgets per product or workspace, compared with run-rate in the same currency.
+
+**Automation (Stage 6)**
+
+- Engine: trigger → conditions → dedupe → approval or execution → run record → audit. Idempotent via a unique (automation, dedupe key) ledger; failed effects release their claim for retry.
+- Eight templates: renewal reminder, overdue escalation, review due, site down → urgent bug, SEO opportunity → proposed task, integration failure, budget threshold, weekly digest report.
+- Dry run, run now, pause/resume, versioning, run history with every action taken, workspace kill switch.
+- Unified inbox with severity, dedupe, read/resolve, and an approvals queue that shows the exact payload; approved actions execute with the approver's permissions re-checked.
+- Scheduler endpoint `/api/cron` (Vercel Cron daily, bearer secret, constant-time compare): provider sync → uptime → automations → scheduled agents.
+
+**Agent Operations Center (Stage 7)**
+
+- Catalog of four first-party agents (Portfolio Analyst, SEO Analyst, Engineering Triage, Finance Monitor) with publisher, version, use case, data access and tool list.
+- Install flow: scope (workspace or one product), accountable owner, instructions, schedule, monthly budget, tools and permission levels (read-only, create internal drafts, requires approval).
+- Runtime: Claude Opus 5.5 via the official Anthropic SDK, manual tool loop (max 12 turns, 6-minute timeout), tool authorisation at execution time (enabled for the agent AND permitted for the owner's role AND inside the product scope), Zod-validated tool inputs, untrusted-data system prompt, server-side refusal fallback, budget check before every turn with auto-pause and owner alert, cancellation, kill switch.
+- Control room: status, runs, success/failure, monthly cost vs cap, median duration, configuration versions, live run page (auto-refreshing) with a step timeline, redacted tool inputs/outputs, tokens, estimated cost and correlation id. No hidden reasoning is stored or shown.
+- Agents can only read data, save draft reports, and *propose* tasks (approval required). They cannot publish, spend, delete or contact anyone.
 
 ---
 
@@ -89,7 +121,7 @@ One choice per concern. Versions are pinned to the latest stable release at scaf
 |---|---|---|
 | tRPC | Next.js server actions plus two REST route handlers (search, export) | Same end-to-end types with less code; every action still goes through a typed, permission-checked service. Revisit if a public API is needed. |
 | Neon for every environment | PGlite locally, Postgres/Neon via `DATABASE_URL` elsewhere | Zero-setup local development and fast in-memory tests on a real Postgres engine. |
-| Inngest from Stage 0 | Not added yet | No background work exists until integrations (Stage 3). Added with the first sync job. |
+| Inngest for background jobs | Cron endpoint + Next.js `after()` for agent runs | Fewer moving parts while volumes are small. Work is idempotent and recorded, so moving it onto Inngest later is a transport change. Revisit when a sync or crawl exceeds serverless limits or needs per-tenant concurrency control. |
 | Full-text search | `ILIKE` search, permission-aware | Enough for current data volumes; full-text indexes are added when search quality or speed demands it. |
 | Row-level security in Stage 1 | Service-layer scoping plus cross-tenant tests; RLS not yet enabled | Every query is scoped by `workspace_id` and tested. RLS is the next hardening step before outside users are onboarded. |
 | shadcn/ui | Hand-built components on design tokens | Smaller surface, matched to the Corniche style. |
@@ -351,7 +383,7 @@ Built late (Stages 6 and 7), but the foundations go in early so they do not need
 
 ## 9. Design system
 
-> **Provisional.** The design template was not attached to the request. Everything below is a working default so engineering is not blocked. When the template arrives, its colors, type, radius, and component style replace these tokens in `src/styles/tokens.css`, and this section is updated. Components read only from tokens, so the swap does not touch feature code.
+> **Source:** the "Corniche" footer reference supplied on 13 Nov 2026 — cream paper, cobalt engraving-style illustration, navy serif headings, quiet grey links. Tokens live in `src/styles/globals.css`; components read only from tokens.
 
 **Character:** a calm, professional command center. Dense with information, quiet in appearance. Not an admin template.
 
@@ -364,19 +396,21 @@ Built late (Stages 6 and 7), but the foundations go in early so they do not need
 5. Every screen has designed states for loading, empty, error, stale, partial, disconnected, and permission denied.
 6. Everything works by keyboard. Command palette on `Ctrl/Cmd + K`.
 
-**Provisional tokens**
+**Tokens**
 
 | Token | Light | Dark |
 |---|---|---|
-| Background | `#FFFFFF` | `#0B0C0E` |
-| Surface | `#F7F7F8` | `#141518` |
-| Border | `#E4E4E7` | `#26272B` |
-| Text | `#18181B` | `#F4F4F5` |
-| Muted text | `#71717A` | `#A1A1AA` |
-| Accent | `#4F46E5` | `#818CF8` |
-| Success / Warning / Danger | `#16A34A` / `#D97706` / `#DC2626` | lighter steps of the same hues |
+| Background (paper) | `#F8E7D1` | `#090E2E` |
+| Surface | `#FCF3E7` | `#0F1640` |
+| Border | `#E5CDAE` | `#1F2A66` |
+| Ink (text) | `#0B1557` | `#F8E7D1` |
+| Muted text | `#74778F` | `#8F94BB` |
+| Accent (cobalt) | `#1D36C9` | `#8094FF` |
+| Chart line | `#1D36C9` | `#7488F5` (validated for lightness and ≥3:1 contrast) |
+| Good / Warn / Bad | `#2E6B45` / `#9A5A0C` / `#A3262C` | `#8CC7A0` / `#E7B46A` / `#F0928D` |
 
-- **Type:** Geist Sans for interface, Geist Mono for numbers, IDs, and code. Base size 14px. Tabular figures in all tables.
+- **Type:** Source Serif 4 for headings and figures, Inter for interface text, JetBrains Mono for IDs and code. Base size 14px. Tabular figures in tables.
+- **Illustration:** inline SVG coastline in cobalt engraving style (`src/components/illustration.tsx`), themed by tokens.
 - **Spacing:** 4px grid.
 - **Radius:** 6px controls, 8px panels.
 - **Elevation:** borders instead of shadows, except for popovers and dialogs.
@@ -534,14 +568,19 @@ No compliance claims are made anywhere in the product or marketing until indepen
 | 4 | 2026-11-13 | Better Auth | Auth data stays in our Postgres; organization support | Enterprise single sign-on is required |
 | 5 | 2026-11-13 | Workspace-scoped queries plus row-level security | Two independent layers against tenant leakage | Never removed; only strengthened |
 | 6 | 2026-11-13 | PostgreSQL full-text search first | No extra system to operate | Search quality complaints |
-| 7 | 2026-11-13 | Provisional design tokens | Design template not yet received | Template is provided |
+| 7 | 2026-11-13 | Design tokens from the Corniche reference | Template received: cream, cobalt, navy, serif display | Brand name is decided |
+| 8 | 2026-11-13 | Server actions instead of tRPC | Same typed boundary, less code | A public API is planned |
+| 9 | 2026-11-13 | Google Search Console as the first integration | Requested; read-only scope; high value for multi-product founders | — |
+| 10 | 2026-11-13 | Cron endpoint + `after()` instead of Inngest | No queue infrastructure needed yet; all work idempotent | Jobs exceed serverless time limits |
+| 11 | 2026-11-13 | Agents call Claude Opus 5.5 through the official SDK with a manual tool loop | Full control over per-call authorisation, budget and audit | Managed Agents if sandboxed code/browser tools are needed |
+| 12 | 2026-11-13 | Agents may only read, draft, and propose | Master prompt §16.6: consequential actions need approval | A specific action earns a pre-approved policy |
 
 ---
 
 ## 15. Open questions
 
-1. **Design template** — needs to be shared (image, Figma link, or URL) so section 9 can be finalized before Stage 0 UI work.
-2. **Product name** — needed before the marketing site and auth emails.
+1. **Remaining connectors** — GitHub, Vercel, Stripe, PostHog, GA4 are listed as planned. Which comes next?
+2. **Product name** — "LayerFlow OS" is a working name in `src/lib/brand.ts`.
 3. **Relationship to existing LayerFlow code** — is this a fresh product, or does it extend an existing codebase and domain?
 4. **First outside users** — solo founders or small teams first? This decides how early invitations and roles need polish.
 5. **Sign-in methods at launch** — Google and GitHub only, or email and password as well?

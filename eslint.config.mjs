@@ -21,7 +21,7 @@ const config = [
   },
   {
     // Services, server helpers, route handlers and tests are allowed to use the database.
-    files: ["src/modules/**", "src/server/**", "src/app/api/**", "src/test/**", "src/instrumentation.ts"],
+    files: ["src/modules/**", "src/server/**", "src/ai/**", "src/integrations/**", "src/app/api/**", "src/test/**", "src/instrumentation.ts"],
     rules: { "no-restricted-imports": "off" },
   },
 ];

@@ -11,6 +11,10 @@ import { listMembers } from "@/modules/identity/service";
 import { LIFECYCLE_PHASES, label } from "@/modules/portfolio/constants";
 import { taskLabel } from "@/modules/work/constants";
 import { ActivityList } from "@/components/activity-list";
+import { ApprovalsPanel } from "@/components/approvals";
+import { RUN_TONE } from "@/components/agent-list";
+import { seoSnapshot } from "@/modules/seo/service";
+import { listAgents } from "@/modules/agents/service";
 import { Badge, EmptyState, HealthBadge, LifecycleBadge, PageHeader, Panel, ProductMark, Stat } from "@/components/ui";
 import { daysUntil, formatDate, money, today } from "@/lib/format";
 
@@ -38,6 +42,10 @@ export default async function CommandCenter({ params }: PageProps<"/w/[workspace
     canAudit ? listActivity(ctx, { limit: 8 }).then((r) => r.items) : [],
     canDocs ? decisionsToRevisit(ctx) : [],
     can(ctx, "members.view") ? listMembers(ctx) : [],
+  ]);
+  const [seo, agents] = await Promise.all([
+    can(ctx, "seo.view") ? seoSnapshot(ctx) : Promise.resolve({ overviews: [], openInsights: 0 } as unknown as Awaited<ReturnType<typeof seoSnapshot>>),
+    can(ctx, "agent.view") ? listAgents(ctx) : Promise.resolve([]),
   ]);
 
   const attention = products
@@ -187,6 +195,39 @@ export default async function CommandCenter({ params }: PageProps<"/w/[workspace
         </div>
 
         <div className="space-y-6">
+          {can(ctx, "automation.view") && <ApprovalsPanel ctx={ctx} empty={false} />}
+          {can(ctx, "seo.view") && seo.overviews.length > 0 && (
+            <Panel title="Search · last 28 days" action={<Link href={`${base}/seo`} className="link text-[12.5px]">SEO</Link>}>
+              <ul className="divide-y divide-line">
+                {seo.overviews.map((o) => o.current && (
+                  <li key={o.resource.id} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
+                    <span className="min-w-0 flex-1 truncate">{o.resource.name}</span>
+                    <span className="tabular-nums">{o.current.clicks.toLocaleString()} clicks</span>
+                    {o.previous && o.previous.clicks > 0 && (
+                      <span className={o.current.clicks >= o.previous.clicks ? "text-good" : "text-bad"}>
+                        {o.current.clicks >= o.previous.clicks ? "+" : ""}{Math.round(((o.current.clicks - o.previous.clicks) / o.previous.clicks) * 100)}%
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="px-4 pb-3 text-[11.5px] text-muted">Google Search Console · {seo.openInsights} open opportunit{seo.openInsights === 1 ? "y" : "ies"}</p>
+            </Panel>
+          )}
+          {can(ctx, "agent.view") && agents.length > 0 && (
+            <Panel title="Agents" action={<Link href={`${base}/agents`} className="link text-[12.5px]">Operations</Link>}>
+              <ul className="divide-y divide-line">
+                {agents.slice(0, 5).map((a) => (
+                  <li key={a.id}>
+                    <Link href={a.lastRun ? `${base}/agents/runs/${a.lastRun.id}` : `${base}/agents/${a.id}`} className="flex items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-sunken/60">
+                      <span className="min-w-0 flex-1 truncate">{a.name}</span>
+                      {a.lastRun ? <Badge tone={RUN_TONE[a.lastRun.status] ?? "outline"}>{a.lastRun.status.replace(/_/g, " ")}</Badge> : <span className="text-muted">never run</span>}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
           {canWork && (
             <Panel title="My work" action={<Link href={`${base}/work?assignee=me`} className="link text-[12.5px]">View all</Link>}>
               {myTasks.length ? (

@@ -6,6 +6,9 @@ import { financeLabel } from "@/modules/finance/constants";
 import { listPeople } from "@/modules/identity/service";
 import { productOptions } from "@/modules/portfolio/service";
 import { AddExpense, AddRevenue, DeleteRevenue, ExpenseActions } from "@/components/client/finance-forms";
+import { BudgetForm } from "@/components/client/planning-forms";
+import { DeleteBudget } from "@/components/client/ops-actions";
+import { listBudgets } from "@/modules/planning/service";
 import { Badge, EmptyState, Panel, SourceNote } from "@/components/ui";
 import { daysUntil, formatDate, money } from "@/lib/format";
 
@@ -21,13 +24,14 @@ function Totals({ t, suffix = "" }: { t: CurrencyTotals | null; suffix?: string 
 }
 
 export async function FinanceView({ ctx, productId, currency }: { ctx: Ctx; productId?: string; currency: string }) {
-  const [summary, expenses, cancelled, revenue, products, people] = await Promise.all([
+  const [summary, expenses, cancelled, revenue, products, people, budgets] = await Promise.all([
     financeSummary(ctx, { productId }),
     listExpenses(ctx, { productId }),
     listExpenses(ctx, { productId, status: "cancelled" }),
     listRevenue(ctx, { productId }),
     productOptions(ctx),
     listPeople(ctx),
+    productId ? Promise.resolve([]) : listBudgets(ctx),
   ]);
   const slug = ctx.workspaceSlug;
   const canEdit = can(ctx, "finance.edit");
@@ -92,6 +96,34 @@ export async function FinanceView({ ctx, productId, currency }: { ctx: Ctx; prod
               </li>
             ))}
           </ul>
+        </Panel>
+      )}
+
+      {!productId && (
+        <Panel title="Budgets" action={<span className="text-[12px] text-muted">Monthly · compared with run-rate in the same currency</span>}>
+          {budgets.length ? (
+            <ul className="divide-y divide-line">
+              {budgets.map((b) => {
+                const spend = b.productId
+                  ? (summary.byProduct.find((p) => p.name === b.productName)?.totals[b.currency] ?? 0)
+                  : (summary.monthlyCost[b.currency] ?? 0);
+                const share = spend / b.monthlyAmountMinor;
+                return (
+                  <li key={b.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+                    <span className="min-w-[140px] font-medium">{b.productName ?? "Whole workspace"}</span>
+                    <div className="h-1.5 w-40 overflow-hidden rounded-full bg-sunken" role="progressbar" aria-valuenow={Math.round(share * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Budget used">
+                      <div className={`h-full rounded-full ${share >= 1 ? "bg-bad" : share >= 0.9 ? "bg-warn" : "bg-chart"}`} style={{ width: `${Math.min(100, Math.round(share * 100))}%` }} />
+                    </div>
+                    <span className="text-[13px] tabular-nums text-ink-2">{money(Math.round(spend), b.currency)} of {money(b.monthlyAmountMinor, b.currency)} · {Math.round(share * 100)}%</span>
+                    {canEdit && <span className="ml-auto"><DeleteBudget slug={slug} id={b.id} /></span>}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="px-4 py-4 text-[13px] text-muted">No budgets. Set a monthly budget and the “Budget threshold” automation can warn you before you exceed it.</p>
+          )}
+          {canEdit && <BudgetForm slug={slug} products={products} currency={currency} />}
         </Panel>
       )}
 

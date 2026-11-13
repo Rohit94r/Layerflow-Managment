@@ -15,11 +15,11 @@ type AuditInput = {
 };
 
 /** Writes an audit event inside the caller's transaction so it commits atomically with the change. */
-export async function recordAudit(tx: Tx, ctx: Pick<Ctx, "workspaceId" | "userId">, e: AuditInput) {
+export async function recordAudit(tx: Tx, ctx: Pick<Ctx, "workspaceId" | "userId"> & { actor?: ActorType }, e: AuditInput) {
   await tx.insert(auditEvent).values({
     workspaceId: ctx.workspaceId,
     actorId: ctx.userId,
-    actorType: e.actorType ?? "human",
+    actorType: e.actorType ?? ctx.actor ?? "human",
     action: e.action,
     targetType: e.targetType,
     targetId: e.targetId ?? null,

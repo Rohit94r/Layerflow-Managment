@@ -26,12 +26,32 @@ export async function GET(_req: Request, { params }: RouteContext<"/api/w/[works
     db.select().from(schema.auditEvent).where(eq(schema.auditEvent.workspaceId, w)),
   ]);
 
+  const [roadmap, goals, budgets, automations, automationRuns, approvals, agents, agentRuns, seoDaily, seoInsights, seoAudits, uptime, connections] = await Promise.all([
+    db.select().from(schema.roadmapItem).where(eq(schema.roadmapItem.workspaceId, w)),
+    db.select().from(schema.goal).where(eq(schema.goal.workspaceId, w)),
+    db.select().from(schema.budget).where(eq(schema.budget.workspaceId, w)),
+    db.select().from(schema.automation).where(eq(schema.automation.workspaceId, w)),
+    db.select().from(schema.automationRun).where(eq(schema.automationRun.workspaceId, w)),
+    db.select().from(schema.approval).where(eq(schema.approval.workspaceId, w)),
+    db.select().from(schema.agentInstance).where(eq(schema.agentInstance.workspaceId, w)),
+    db.select().from(schema.agentRun).where(eq(schema.agentRun.workspaceId, w)),
+    db.select().from(schema.seoDaily).where(eq(schema.seoDaily.workspaceId, w)),
+    db.select().from(schema.seoInsight).where(eq(schema.seoInsight.workspaceId, w)),
+    db.select().from(schema.seoAudit).where(eq(schema.seoAudit.workspaceId, w)),
+    db.select().from(schema.uptimeCheck).where(eq(schema.uptimeCheck.workspaceId, w)),
+    // Connection metadata only: encrypted tokens are never exported.
+    db.select({ id: schema.integrationConnection.id, provider: schema.integrationConnection.provider, account: schema.integrationConnection.accountLabel, scopes: schema.integrationConnection.scopes, status: schema.integrationConnection.status, createdAt: schema.integrationConnection.createdAt })
+      .from(schema.integrationConnection).where(eq(schema.integrationConnection.workspaceId, w)),
+  ]);
+
   const body = JSON.stringify(
     {
       exportedAt: new Date().toISOString(),
-      format: "layerflow-os/v1",
+      format: "layerflow-os/v2",
       workspace: { name: ctx.workspace.name, slug: ctx.workspace.slug, timezone: ctx.workspace.timezone, currency: ctx.workspace.currency },
-      members, groups, products, links, tasks, comments, documents, expenses, revenue, audit,
+      members, groups, products, links, tasks, comments, documents, expenses, revenue, budgets, roadmap, goals,
+      integrations: connections, seo: { daily: seoDaily, insights: seoInsights, audits: seoAudits, uptime },
+      automations, automationRuns, approvals, agents, agentRuns, audit,
     },
     null,
     2,

@@ -16,6 +16,7 @@
   --cobalt: #1d36c9;
   --cobalt-strong: #13259b;
   --cobalt-soft: #e3dfec;
+  --chart: #1d36c9; /* validated: lightness band, chroma, ≥3:1 vs surface */
   --on-cobalt: #fcf3e7;
   --good: #2e6b45;
   --good-soft: #dfe5cf;
@@ -41,6 +42,7 @@
     --cobalt: #8094ff;
     --cobalt-strong: #a3b2ff;
     --cobalt-soft: #1a2464;
+    --chart: #7488f5;
     --on-cobalt: #090e2e;
     --good: #8cc7a0;
     --good-soft: #15302a;
@@ -66,6 +68,7 @@
   --cobalt: #8094ff;
   --cobalt-strong: #a3b2ff;
   --cobalt-soft: #1a2464;
+  --chart: #7488f5;
   --on-cobalt: #090e2e;
   --good: #8cc7a0;
   --good-soft: #15302a;
@@ -79,6 +82,7 @@
 }
 
 @theme inline {
+  --color-chart: var(--chart);
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-sunken: var(--sunken);
