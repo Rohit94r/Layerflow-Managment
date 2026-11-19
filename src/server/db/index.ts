@@ -26,6 +26,10 @@ function create(): State {
     const client = postgres(url, { max: 10, prepare: false });
     return { db: drizzlePostgres(client, { schema }) as unknown as Db, ready: null, kind: "postgres" };
   }
+  // Serverless hosts have a read-only, per-instance filesystem: the embedded database cannot work there.
+  if (process.env.VERCEL) {
+    throw new Error("DATABASE_URL is not set. On Vercel, add a Postgres connection string (e.g. Neon, pooled) in Project → Settings → Environment Variables, then redeploy.");
+  }
   // Zero-setup local database. Never used when DATABASE_URL is set.
   const dir = path.join(process.cwd(), ".data", "pglite");
   mkdirSync(dir, { recursive: true });

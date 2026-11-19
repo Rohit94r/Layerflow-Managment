@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { ProviderError, providerFetch } from "../core/http";
+import { publicOrigin } from "../../lib/origin";
 
 /**
  * Google OAuth 2.0 web-server flow shared by every Google provider
@@ -11,8 +12,7 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 
 export function redirectUri(provider: string) {
-  const base = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
-  return `${base.replace(/\/$/, "")}/api/integrations/${provider}/callback`;
+  return `${publicOrigin()}/api/integrations/${provider}/callback`;
 }
 
 export function pkcePair() {

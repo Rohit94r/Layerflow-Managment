@@ -18,11 +18,30 @@ pnpm dev                      # http://localhost:3000
 
 With `DATABASE_URL` empty, an embedded Postgres (PGlite) is created in `.data/` and migrated on startup — no database to install.
 
-## Production
+## Deploy on Vercel
 
-1. Create a Postgres database (Neon recommended) and set `DATABASE_URL`.
-2. Set `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` (your public URL).
-3. `pnpm db:migrate`, then `pnpm build && pnpm start` (or deploy to Vercel).
+1. **Database.** Create a Postgres database. Neon works well: Vercel → Storage → Neon, or neon.tech. Copy the **pooled** connection string.
+2. **Import the repo** in Vercel. The framework (Next.js) and pnpm are detected automatically. `vercel.json` sets the build to `pnpm db:migrate && pnpm build`, so migrations run once per deploy, and adds the daily scheduler.
+3. **Environment variables** (Project → Settings → Environment Variables, Production):
+
+   | Variable | Required | Value |
+   |---|---|---|
+   | `DATABASE_URL` | Yes | Pooled Postgres URL. The deploy fails with a clear message if it's missing. |
+   | `BETTER_AUTH_SECRET` | Yes | `openssl rand -base64 32` |
+   | `TOKEN_ENCRYPTION_KEY` | Yes | `openssl rand -base64 32` (encrypts OAuth tokens and webhook secrets) |
+   | `BETTER_AUTH_URL` | Recommended | `https://your-domain.com`. If unset, the Vercel production domain is used. Hosted blogs and OAuth redirects use this origin. |
+   | `CRON_SECRET` | Recommended | Any long random string. Vercel Cron sends it automatically to `/api/cron`. |
+   | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | For Search Console / GA4 | See `.env.example` for the two redirect URIs to register. |
+   | `ANTHROPIC_API_KEY` | For agents | Usage is capped per agent. |
+
+4. **Deploy**, then open the site, sign up and create your workspace.
+5. **Previews:** give Preview deployments their own `DATABASE_URL` (for example a Neon branch), or leave it unset for Preview. Otherwise a preview build would migrate your production database.
+6. **Scheduler timing:** the Hobby plan runs `/api/cron` once a day (06:00 UTC). For on-time scheduled posts, use Pro with an hourly cron, or call `/api/cron` from any external cron with `Authorization: Bearer $CRON_SECRET`.
+
+## Other hosts
+
+1. Create a Postgres database and set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` and `TOKEN_ENCRYPTION_KEY`.
+2. `pnpm db:migrate`, then `pnpm build && pnpm start`.
 
 ## Scripts
 

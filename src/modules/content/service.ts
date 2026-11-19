@@ -6,6 +6,7 @@ import { assertCan, can, roleCan, type Ctx } from "../../server/permissions";
 import { decrypt, encrypt } from "../../server/crypto";
 import { conflict, invalid, notFound } from "../../lib/errors";
 import { slugify } from "../../lib/format";
+import { publicOrigin } from "../../lib/origin";
 import { deliverWebhook, isValidIndexNowKey, pingIndexNow } from "../../integrations/providers/publishing";
 import { recordAudit } from "../audit/service";
 import { workspace, workspaceMember } from "../identity/schema";
@@ -77,7 +78,7 @@ function scoreOf(p: { title: string; slug: string; body: string; metaTitle: stri
 
 /** Public origin used for hosted-blog URLs. */
 export function appOrigin() {
-  return (process.env.BETTER_AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  return publicOrigin();
 }
 export const hostedBlogPath = (wsSlug: string, productSlug: string) => `/blog/${wsSlug}/${productSlug}`;
 export const hostedPostUrl = (wsSlug: string, productSlug: string, postSlug: string) => `${appOrigin()}${hostedBlogPath(wsSlug, productSlug)}/${postSlug}`;
