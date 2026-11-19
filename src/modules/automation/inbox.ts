@@ -67,6 +67,8 @@ const EXECUTORS: Record<string, (ctx: Ctx, payload: Record<string, unknown>) => 
     const d = await createDoc(ctx, p as never);
     return `Created document “${d.title}”`;
   },
+  // Lazy import: the content module itself requests approvals from here.
+  "content.publish": async (ctx, p) => (await import("../content/service")).executePublishApproval(ctx, p),
 };
 
 export async function requestApproval(input: {

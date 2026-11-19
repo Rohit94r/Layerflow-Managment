@@ -11,10 +11,15 @@ const code = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code", displ
 export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
   description: APP_TAGLINE,
-  icons: { icon: "/icon.svg" },
+  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  appleWebApp: { capable: true, title: "LayerFlow", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Lets the bottom tab bar sit above the home indicator on notched phones.
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8e7d1" },
     { media: "(prefers-color-scheme: dark)", color: "#090e2e" },

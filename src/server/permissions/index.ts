@@ -32,6 +32,10 @@ export const CAPABILITIES = [
   "agent.manage",
   "agent.run",
   "approval.decide",
+  "content.view",
+  "content.edit",
+  "content.publish",
+  "analytics.view",
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 
@@ -47,16 +51,16 @@ export const ROLE_CAPABILITIES: Record<Role, Set<Capability>> = {
     "product.delete", "work.view", "work.edit", "docs.view", "docs.edit", "finance.view", "finance.edit",
     "audit.view", "data.export", "integration.view", "integration.manage", "seo.view", "seo.run",
     "planning.view", "planning.edit", "automation.view", "automation.manage", "agent.view", "agent.manage",
-    "agent.run", "approval.decide",
+    "agent.run", "approval.decide", "content.view", "content.edit", "content.publish", "analytics.view",
   ),
   member: set(
     "workspace.view", "members.view", "product.view", "product.create", "product.edit", "work.view", "work.edit",
     "docs.view", "docs.edit", "audit.view", "integration.view", "seo.view", "seo.run", "planning.view",
-    "planning.edit", "automation.view", "agent.view", "agent.run",
+    "planning.edit", "automation.view", "agent.view", "agent.run", "content.view", "content.edit", "analytics.view",
   ),
   viewer: set(
     "workspace.view", "members.view", "product.view", "work.view", "docs.view", "audit.view", "integration.view",
-    "seo.view", "planning.view", "automation.view", "agent.view",
+    "seo.view", "planning.view", "automation.view", "agent.view", "content.view", "analytics.view",
   ),
   guest: set("workspace.view", "product.view", "work.view", "planning.view"),
   billing: set("workspace.view", "members.view", "product.view", "finance.view", "finance.edit", "planning.view"),

@@ -73,6 +73,8 @@ export default async function ProductLayout({ children, params }: LayoutProps<"/
           ...(can(ctx, "work.view") ? [{ href: `${base}/work`, label: "Work" }] : []),
           ...(can(ctx, "planning.view") ? [{ href: `${base}/roadmap`, label: "Roadmap" }] : []),
           ...(can(ctx, "docs.view") ? [{ href: `${base}/docs`, label: "Docs" }] : []),
+          ...(can(ctx, "analytics.view") || can(ctx, "seo.view") ? [{ href: `${base}/growth`, label: "Growth" }] : []),
+          ...(can(ctx, "content.view") ? [{ href: `${base}/content`, label: "Content" }] : []),
           ...(can(ctx, "seo.view") ? [{ href: `${base}/seo`, label: "SEO & uptime" }] : []),
           ...(can(ctx, "agent.view") ? [{ href: `${base}/agents`, label: "Agents" }] : []),
           ...(can(ctx, "finance.view") ? [{ href: `${base}/finance`, label: "Finance" }] : []),

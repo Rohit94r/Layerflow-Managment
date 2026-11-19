@@ -6,6 +6,7 @@ import { ensureDb } from "@/server/db";
 import { dueConnections, syncConnection } from "@/modules/integrations/service";
 import { checkUptime, productsWithSites } from "@/modules/seo/service";
 import { runScheduledAutomations } from "@/modules/automation/service";
+import { publishDuePosts } from "@/modules/content/service";
 import { createRun, dueAgents } from "@/modules/agents/service";
 import { executeRun } from "@/ai/runtime";
 import { workspace, workspaceMember } from "@/modules/identity/schema";
@@ -14,7 +15,7 @@ export const maxDuration = 300;
 
 /**
  * Scheduler entry point (Vercel Cron or any external cron hitting it with the secret).
- * Order: provider sync → uptime → automations → scheduled agents. Each step is isolated.
+ * Order: provider sync → uptime → scheduled posts → automations → scheduled agents. Each step is isolated.
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -43,6 +44,12 @@ export async function GET(req: Request) {
     report.uptime = { products: sites.length };
   } catch (e) {
     report.uptime = { error: e instanceof Error ? e.message : "failed" };
+  }
+
+  try {
+    report.content = await publishDuePosts();
+  } catch (e) {
+    report.content = { error: e instanceof Error ? e.message : "failed" };
   }
 
   try {

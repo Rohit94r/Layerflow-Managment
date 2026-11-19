@@ -9,6 +9,9 @@ import { OPEN_STATUSES } from "../work/constants";
 import { integrationConnection } from "../integrations/schema";
 import { seoInsight, uptimeCheck } from "../seo/schema";
 import { budget } from "../planning/schema";
+import { analyticsDaily } from "../analytics/schema";
+import { contentPost } from "../content/schema";
+import { integrationResource } from "../integrations/schema";
 import { membersWithCapability } from "./inbox";
 
 /**
@@ -149,7 +152,7 @@ export const TEMPLATES: Template[] = [
       const fallback = await owners(ws);
       return rows.map((c) => ({
         kind: "notify" as const, dedupeKey: `${c.id}:${today()}`, target: c.accountLabel, recipients: c.connectedBy ? [c.connectedBy] : fallback,
-        severity: "critical" as const, title: `${c.provider === "google_search_console" ? "Search Console" : c.provider} ${c.status === "needs_reauth" ? "needs reconnecting" : "sync is failing"}`,
+        severity: "critical" as const, title: `${c.provider === "google_search_console" ? "Search Console" : c.provider === "google_analytics" ? "Google Analytics" : c.provider} ${c.status === "needs_reauth" ? "needs reconnecting" : "sync is failing"}`,
         body: c.lastError ?? "", href: `/w/${slug}/integrations`,
       }));
     },
@@ -180,6 +183,63 @@ export const TEMPLATES: Template[] = [
           body: `Run-rate ${money(Math.round(runRate), b.currency)}/mo vs budget ${money(b.monthlyAmountMinor, b.currency)}/mo.`, href: `/w/${slug}/finance`,
         }];
       });
+    },
+  },
+  {
+    key: "traffic_drop",
+    name: "Traffic drop alert",
+    trigger: "Daily · GA4 sessions in the last 7 days fell N% vs the 7 days before",
+    description: "Alerts the product owner when Google Analytics sessions drop sharply, with the numbers. Ignores low-volume properties to avoid noise.",
+    actionLabel: "Inbox notification",
+    params: [
+      { key: "percent", label: "Drop threshold %", type: "number", default: 30 },
+      { key: "minSessions", label: "Minimum sessions in the earlier week", type: "number", default: 100 },
+    ],
+    canRequireApproval: false,
+    async evaluate(ws, slug, p, productId) {
+      const props = await db.select({ r: integrationResource, ownerId: product.ownerId, productName: product.name, productSlug: product.slug })
+        .from(integrationResource).innerJoin(product, eq(product.id, integrationResource.productId))
+        .where(and(eq(integrationResource.workspaceId, ws), eq(integrationResource.kind, "ga4_property"), ...(productId ? [eq(integrationResource.productId, productId)] : [])));
+      const fallback = await owners(ws);
+      const out: Effect[] = [];
+      for (const { r, ownerId, productName, productSlug } of props) {
+        const rows = await db.select({ day: analyticsDaily.day, sessions: analyticsDaily.sessions }).from(analyticsDaily).where(eq(analyticsDaily.resourceId, r.id)).orderBy(desc(analyticsDaily.day)).limit(14);
+        if (rows.length < 14) continue; // not enough data to compare two full weeks
+        const last = rows.slice(0, 7).reduce((s, x) => s + x.sessions, 0);
+        const prev = rows.slice(7, 14).reduce((s, x) => s + x.sessions, 0);
+        if (prev < Number(p.minSessions ?? 100)) continue;
+        const drop = (prev - last) / prev;
+        if (drop * 100 < Number(p.percent ?? 30)) continue;
+        out.push({
+          kind: "notify", dedupeKey: `${r.id}:${rows[0]!.day}`, target: productName, recipients: ownerId ? [ownerId] : fallback, severity: drop >= 0.5 ? "critical" : "warning",
+          title: `${productName}: sessions down ${Math.round(drop * 100)}% week over week`,
+          body: `${last.toLocaleString("en-US")} sessions (${rows[6]!.day} → ${rows[0]!.day}) vs ${prev.toLocaleString("en-US")} the week before. Source: Google Analytics 4. Check channels and landing pages on the Growth tab.`,
+          href: `/w/${slug}/products/${productSlug}/growth`,
+        });
+      }
+      return out;
+    },
+  },
+  {
+    key: "content_review_reminder",
+    name: "Content review reminder",
+    trigger: "Daily · a post has waited in review for N days",
+    description: "Reminds publishers about drafts (including agent drafts) waiting for review, so the pipeline doesn't stall.",
+    actionLabel: "Inbox notification",
+    params: [{ key: "days", label: "Days in review", type: "number", default: 3 }],
+    canRequireApproval: false,
+    async evaluate(ws, slug, p, productId) {
+      const cutoff = new Date(Date.now() - Number(p.days ?? 3) * 86400000);
+      const rows = await db.select({ c: contentPost, productName: product.name }).from(contentPost).innerJoin(product, eq(product.id, contentPost.productId))
+        .where(and(eq(contentPost.workspaceId, ws), eq(contentPost.status, "in_review"), lt(contentPost.updatedAt, cutoff), ...(productId ? [eq(contentPost.productId, productId)] : [])));
+      if (!rows.length) return [];
+      const publishers = await membersWithCapability(ws, "content.publish");
+      const week = isoWeek(new Date());
+      return rows.map(({ c, productName }) => ({
+        kind: "notify" as const, dedupeKey: `${c.id}:${week}`, target: c.title, recipients: publishers, severity: "info" as const,
+        title: `Waiting for review: ${c.title}`, body: `${productName} · ${c.source === "agent" ? "agent draft" : "draft"} · SEO score ${c.seoScore} · in review since ${c.updatedAt.toISOString().slice(0, 10)}.`,
+        href: `/w/${slug}/content/${c.id}`,
+      }));
     },
   },
   {

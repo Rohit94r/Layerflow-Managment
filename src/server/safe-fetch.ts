@@ -106,3 +106,27 @@ export async function certificateExpiry(raw: string): Promise<Date | null> {
     });
   });
 }
+
+/**
+ * POST JSON to a user-configured URL (publishing webhooks). Same public-address guard as safeGet;
+ * redirects are not followed (a webhook must answer at the configured URL).
+ */
+export async function safePostJson(raw: string, body: unknown, opts: { headers?: Record<string, string>; timeoutMs?: number; maxBytes?: number } = {}) {
+  const url = await assertPublicUrl(raw);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 15000);
+  const started = Date.now();
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      redirect: "manual",
+      signal: ctrl.signal,
+      headers: { "Content-Type": "application/json", "User-Agent": "LayerFlowOS-Publisher/1.0", ...opts.headers },
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
+    const text = await readCapped(res, opts.maxBytes ?? 200_000);
+    return { status: res.status, ok: res.status >= 200 && res.status < 300, body: text, ms: Date.now() - started };
+  } finally {
+    clearTimeout(timer);
+  }
+}

@@ -36,8 +36,9 @@ Not a Jira, Notion, Stripe, or analytics replacement. Not every integration. Not
 | Database | Embedded PGlite (real Postgres in WASM) when `DATABASE_URL` is empty; any Postgres/Neon URL in staging and production. Same migrations for both. |
 | Design | Finalised from the supplied "Corniche" reference: cream paper, cobalt ink, navy serif type. See §9. |
 | Product name | Working name **LayerFlow OS**, set in one place: `src/lib/brand.ts`. |
-| Quality gates | `pnpm lint`, `pnpm typecheck`, `pnpm test` (32 tests: tenant isolation, permissions, domain rules, SEO rules, SSRF guard, encryption, automation idempotency, approvals, agent tool authorisation), `pnpm build`. All passing. |
-| Needs configuration | Google Search Console (`GOOGLE_CLIENT_ID/SECRET`), agents (`ANTHROPIC_API_KEY`), scheduler (`CRON_SECRET`), production token key (`TOKEN_ENCRYPTION_KEY`). Without them those features show a setup state; everything else works. See `.env.example`. |
+| Quality gates | `pnpm lint`, `pnpm typecheck`, `pnpm test` (56 tests: tenant isolation, permissions, domain rules, SEO rules, SSRF guard, encryption, automation idempotency, approvals, agent tool authorisation, content workflow and publish policies, public-blog visibility, webhook signing, GA4 parsing, growth read models), `pnpm build`. All passing. |
+| Growth engine (19 Nov 2026) | Content Studio + hosted blog + webhook publishing, Content Writer and Growth Analyst agents, GA4 connector, Growth dashboard, next best actions, mobile tab bar and PWA. Details and the proposed roadmap: [new-features.md](new-features.md). |
+| Needs configuration | Google Search Console and Analytics 4 (`GOOGLE_CLIENT_ID/SECRET`), agents (`ANTHROPIC_API_KEY`), scheduler (`CRON_SECRET`), production token key (`TOKEN_ENCRYPTION_KEY`). Without them those features show a setup state; everything else works. See `.env.example`. |
 
 ### What works today
 

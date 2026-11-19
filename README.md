@@ -3,6 +3,7 @@
 The operating system for founders and early developers who run more than one product: every product, task, decision, cost and integration in one workspace, with a clear next action.
 
 - Vision and requirements: [product-os-master-prompt-v3.md](product-os-master-prompt-v3.md)
+- New features (growth engine, content, agents, mobile) and what's next: [new-features.md](new-features.md)
 - Architecture, stages and decisions: [BUILD.md](BUILD.md)
 
 ## Run it locally

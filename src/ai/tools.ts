@@ -10,6 +10,10 @@ import { financeSummary } from "../modules/finance/service";
 import { listInsights, listProperties, propertyOverview } from "../modules/seo/service";
 import { createDoc } from "../modules/knowledge/service";
 import { requestApproval } from "../modules/automation/inbox";
+import { analyticsOverview, listAnalyticsProperties } from "../modules/analytics/service";
+import { createPost, getPost, listPosts, requestPublish, updatePost } from "../modules/content/service";
+import { analyzeContent } from "../modules/content/seo-score";
+import { FUNNEL_STAGES, SEARCH_INTENTS } from "../modules/content/constants";
 import type { ToolLevel } from "./catalog";
 
 export type ToolEnv = { ctx: Ctx; agent: { instanceId: string; name: string; productId: string | null }; runId: string };
@@ -175,6 +179,108 @@ export const TOOLS = [
         payload: { title: i.title, description: `${i.description}\n\n_Proposed by agent “${env.agent.name}”._`, priority: i.priority, type: i.type, productId: pid },
       });
       return { status: "pending_approval", approvalId: a.id };
+    },
+  }),
+  def({
+    name: "get_analytics",
+    description: "Google Analytics 4 per mapped property: sessions, users, page views, engagement rate and key events for the last 28 days vs the previous 28, plus top channels and landing pages.",
+    level: "read", capability: "analytics.view",
+    schema: z.object({ product_slug: z.string().optional() }),
+    jsonSchema: { type: "object", properties: slugProp, additionalProperties: false },
+    async run(env, i) {
+      const props = (await listAnalyticsProperties(env.ctx, await productId(env, i.product_slug))).filter((p) => p.productId);
+      if (!props.length) return { connected: false, note: "Google Analytics is not connected or no property is mapped to this product. Do not guess traffic numbers." };
+      const out = [];
+      for (const p of props) {
+        const o = await analyticsOverview(env.ctx, p.id);
+        out.push({
+          product: p.productName, property: p.name, dataThrough: p.dataThrough, current: o.current, previous: o.previous,
+          channels: o.channels.slice(0, 10), landingPages: o.landingPages.slice(0, 20), devices: o.devices,
+          note: "users are daily users summed over the window; the latest 1–2 days may still be processing at Google.",
+        });
+      }
+      return { source: "Google Analytics 4 (Data API)", properties: out };
+    },
+  }),
+  def({
+    name: "list_content",
+    description: "List blog posts (title, status, target keyword, SEO score, publish date, live URL). Use it to avoid duplicating topics and to find gaps.",
+    level: "read", capability: "content.view",
+    schema: z.object({ product_slug: z.string().optional(), status: z.enum(["idea", "draft", "in_review", "approved", "scheduled", "published", "archived"]).optional() }),
+    jsonSchema: { type: "object", properties: { ...slugProp, status: { type: "string", enum: ["idea", "draft", "in_review", "approved", "scheduled", "published", "archived"] } }, additionalProperties: false },
+    async run(env, i) {
+      const rows = await listPosts(env.ctx, { productId: await productId(env, i.product_slug), status: i.status, limit: 100 });
+      return rows.map((p) => ({ id: p.id, title: p.title, slug: p.slug, status: p.status, keyword: p.targetKeyword, seoScore: p.seoScore, words: p.wordCount, product: p.productSlug, publishedAt: p.publishedAt?.toISOString() ?? null, url: p.liveUrl }));
+    },
+  }),
+  def({
+    name: "draft_blog_post",
+    description: "Save a new blog post as a DRAFT for one product. Returns the deterministic SEO score and the checks that did not pass so you can improve it with update_blog_post. Nothing is published.",
+    level: "create_internal", capability: "content.edit",
+    schema: z.object({
+      product_slug: z.string().optional(), title: z.string().min(5).max(200), target_keyword: z.string().min(2).max(120), body: z.string().min(200).max(60000),
+      excerpt: z.string().max(500), meta_title: z.string().max(120), meta_description: z.string().max(320),
+      secondary_keywords: z.array(z.string().max(80)).max(10).optional(), search_intent: z.enum(SEARCH_INTENTS).optional(), funnel_stage: z.enum(FUNNEL_STAGES).optional(),
+      tags: z.array(z.string().max(40)).max(8).optional(), slug: z.string().max(80).optional(),
+    }),
+    jsonSchema: {
+      type: "object",
+      properties: {
+        ...slugProp, title: { type: "string" }, target_keyword: { type: "string" }, body: { type: "string", description: "Markdown. Use ## for sections; the title is the H1." },
+        excerpt: { type: "string" }, meta_title: { type: "string", description: "30–60 characters" }, meta_description: { type: "string", description: "120–160 characters" },
+        secondary_keywords: { type: "array", items: { type: "string" } }, search_intent: { type: "string", enum: [...SEARCH_INTENTS] }, funnel_stage: { type: "string", enum: [...FUNNEL_STAGES] },
+        tags: { type: "array", items: { type: "string" } }, slug: { type: "string" },
+      },
+      required: ["title", "target_keyword", "body", "excerpt", "meta_title", "meta_description"], additionalProperties: false,
+    },
+    async run(env, i) {
+      const pid = await productId(env, i.product_slug);
+      if (!pid) throw new Error("Pass product_slug: a post belongs to one product.");
+      const post = await createPost(env.ctx, {
+        productId: pid, title: i.title, slug: i.slug, body: i.body, excerpt: i.excerpt, metaTitle: i.meta_title, metaDescription: i.meta_description,
+        targetKeyword: i.target_keyword, secondaryKeywords: i.secondary_keywords, searchIntent: i.search_intent, funnelStage: i.funnel_stage, tags: i.tags,
+        authorName: env.agent.name,
+      }, { source: "agent", agentInstanceId: env.agent.instanceId, agentRunId: env.runId });
+      const a = analyzeContent(post);
+      return { saved: true, postId: post.id, slug: post.slug, seoScore: a.score, words: a.wordCount, toImprove: a.checks.filter((c) => c.status !== "pass").map((c) => `${c.label}: ${c.detail}`) };
+    },
+  }),
+  def({
+    name: "update_blog_post",
+    description: "Revise a draft post this agent wrote (title, body, meta fields). Only drafts written by this agent can be changed.",
+    level: "create_internal", capability: "content.edit",
+    schema: z.object({
+      post_id: z.string(), title: z.string().min(5).max(200).optional(), body: z.string().min(200).max(60000).optional(), excerpt: z.string().max(500).optional(),
+      meta_title: z.string().max(120).optional(), meta_description: z.string().max(320).optional(), target_keyword: z.string().max(120).optional(),
+    }),
+    jsonSchema: {
+      type: "object",
+      properties: { post_id: { type: "string" }, title: { type: "string" }, body: { type: "string" }, excerpt: { type: "string" }, meta_title: { type: "string" }, meta_description: { type: "string" }, target_keyword: { type: "string" } },
+      required: ["post_id"], additionalProperties: false,
+    },
+    async run(env, i) {
+      const p = await getPost(env.ctx, i.post_id);
+      if (!p) throw new Error("Post not found.");
+      if (p.agentInstanceId !== env.agent.instanceId || p.status !== "draft") throw new Error("Only this agent's own drafts can be revised.");
+      if (env.agent.productId && p.productId !== env.agent.productId) throw new Error("This agent is scoped to a different product.");
+      const patch = Object.fromEntries(Object.entries({ title: i.title, body: i.body, excerpt: i.excerpt, metaTitle: i.meta_title, metaDescription: i.meta_description, targetKeyword: i.target_keyword }).filter(([, v]) => v !== undefined));
+      const u = await updatePost(env.ctx, p.id, patch);
+      const a = analyzeContent(u);
+      return { saved: true, seoScore: a.score, words: a.wordCount, toImprove: a.checks.filter((c) => c.status !== "pass").map((c) => `${c.label}: ${c.detail}`) };
+    },
+  }),
+  def({
+    name: "request_publish",
+    description: "Ask for one of this agent's drafts to be published (optionally at a future ISO time). The product's publishing policy decides: a person reviews it, it goes to the approvals queue, or (only if the owner enabled automatic publishing) it is scheduled/published within the weekly limit.",
+    level: "approval", capability: "content.edit",
+    schema: z.object({ post_id: z.string(), publish_at: z.string().datetime({ offset: true }).optional() }),
+    jsonSchema: { type: "object", properties: { post_id: { type: "string" }, publish_at: { type: "string", description: "ISO 8601 date-time, e.g. 2026-11-24T09:00:00Z" } }, required: ["post_id"], additionalProperties: false },
+    async run(env, i) {
+      const p = await getPost(env.ctx, i.post_id);
+      if (!p) throw new Error("Post not found.");
+      if (p.agentInstanceId !== env.agent.instanceId) throw new Error("Agents can only request publishing for their own drafts.");
+      if (env.agent.productId && p.productId !== env.agent.productId) throw new Error("This agent is scoped to a different product.");
+      return requestPublish(env.ctx, { postId: p.id, scheduledAt: i.publish_at ? new Date(i.publish_at) : null, agent: { instanceId: env.agent.instanceId, name: env.agent.name }, runId: env.runId });
     },
   }),
 ];

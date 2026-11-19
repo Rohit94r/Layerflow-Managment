@@ -38,6 +38,31 @@ const VERBS: Record<string, string> = {
   "expense.deleted": "deleted cost",
   "revenue.recorded": "recorded revenue",
   "revenue.deleted": "deleted revenue",
+  "content.created": "drafted post",
+  "content.updated": "edited post",
+  "content.in_review": "sent for review",
+  "content.approved": "approved post",
+  "content.draft": "moved back to draft",
+  "content.archived": "archived post",
+  "content.idea": "parked as an idea",
+  "content.scheduled": "scheduled post",
+  "content.published": "published",
+  "content.unpublished": "unpublished",
+  "content.deleted": "deleted post",
+  "content.channel_updated": "changed publishing settings for",
+  "content.webhook_secret_rotated": "rotated the webhook secret for",
+  "integration.connected": "connected",
+  "integration.reconnected": "reconnected",
+  "integration.disconnected": "disconnected",
+  "integration.resource_mapped": "mapped",
+  "agent.installed": "installed agent",
+  "agent.configured": "reconfigured agent",
+  "agent.run_completed": "finished a run:",
+  "automation.created": "created automation",
+  "automation.ran": "ran automation",
+  "approval.approved": "approved",
+  "approval.rejected": "rejected",
+  "approval.failed": "approved, but execution failed:",
 };
 
 const pretty = (v: unknown) => {
@@ -71,6 +96,7 @@ export function ActivityList({ items, slug, emptyText = "Nothing has happened ye
         const href =
           e.targetType === "document" && e.action !== "doc.deleted" && e.targetId ? `/w/${slug}/docs/${e.targetId}`
           : e.targetType === "task" && e.action !== "task.deleted" ? `/w/${slug}/work/${e.targetLabel.match(/^#(\d+)/)?.[1] ?? ""}`
+          : e.targetType === "content" && e.action !== "content.deleted" && e.targetId ? `/w/${slug}/content/${e.targetId}`
           : null;
         return (
           <li key={e.id} className="flex gap-3 px-4 py-2.5">

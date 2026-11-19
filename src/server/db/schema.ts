@@ -10,3 +10,5 @@ export * from "../../modules/seo/schema";
 export * from "../../modules/automation/schema";
 export * from "../../modules/agents/schema";
 export * from "../../modules/planning/schema";
+export * from "../../modules/content/schema";
+export * from "../../modules/analytics/schema";

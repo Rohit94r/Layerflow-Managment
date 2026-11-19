@@ -15,6 +15,8 @@ import { ApprovalsPanel } from "@/components/approvals";
 import { RUN_TONE } from "@/components/agent-list";
 import { seoSnapshot } from "@/modules/seo/service";
 import { listAgents } from "@/modules/agents/service";
+import { nextActions, portfolioPulse } from "@/modules/growth/service";
+import { NextActionsPanel, PulseTable } from "@/components/growth-views";
 import { Badge, EmptyState, HealthBadge, LifecycleBadge, PageHeader, Panel, ProductMark, Stat } from "@/components/ui";
 import { daysUntil, formatDate, money, today } from "@/lib/format";
 
@@ -47,6 +49,9 @@ export default async function CommandCenter({ params }: PageProps<"/w/[workspace
     can(ctx, "seo.view") ? seoSnapshot(ctx) : Promise.resolve({ overviews: [], openInsights: 0 } as unknown as Awaited<ReturnType<typeof seoSnapshot>>),
     can(ctx, "agent.view") ? listAgents(ctx) : Promise.resolve([]),
   ]);
+  const pulse = await portfolioPulse(ctx);
+  const actions = await nextActions(ctx, pulse);
+  const growthConnected = pulse.some((r) => r.search || r.traffic);
 
   const attention = products
     .map((p) => ({ p, s: (signals.get(p.id) ?? []).sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]) }))
@@ -62,6 +67,8 @@ export default async function CommandCenter({ params }: PageProps<"/w/[workspace
     { done: openTasks.length > 0 || myTasks.length > 0, label: "Create a task for something you're working on", href: `${base}/work?new=1` },
     { done: products.some((p) => p.health !== "unknown"), label: "Give a product a health assessment", href: products[0] ? `${base}/products/${products[0].slug}/settings` : `${base}/products/new` },
     ...(canFinance ? [{ done: renewals.length > 0, label: "Log a cost or renewal (hosting, domain, API)", href: `${base}/finance` }] : []),
+    ...(can(ctx, "integration.manage") ? [{ done: growthConnected, label: "Connect Google Analytics or Search Console", href: `${base}/integrations` }] : []),
+    ...(can(ctx, "content.publish") ? [{ done: pulse.some((r) => (r.content?.published ?? 0) > 0), label: "Publish a first blog post", href: `${base}/content/new` }] : []),
     ...(can(ctx, "members.manage") ? [{ done: members.length > 1, label: "Invite a teammate or co-founder", href: `${base}/settings#members` }] : []),
   ];
   const setupDone = checklist.every((c) => c.done);
@@ -107,7 +114,7 @@ export default async function CommandCenter({ params }: PageProps<"/w/[workspace
       </div>
 
       {products.length > 0 && (
-        <div className="mb-6 grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-4">
           {LIFECYCLE_PHASES.map((phase) => {
             const inPhase = products.filter((p) => phase.stages.includes(p.lifecycle));
             return (
@@ -130,8 +137,16 @@ export default async function CommandCenter({ params }: PageProps<"/w/[workspace
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-6">
+          <NextActionsPanel actions={actions} />
+
+          {pulse.length > 0 && (
+            <Panel title="Portfolio pulse" action={<Link href={`${base}/growth`} className="link text-[12.5px]">Growth</Link>}>
+              <PulseTable slug={ctx.workspaceSlug} rows={pulse} />
+            </Panel>
+          )}
+
           <Panel title="Needs attention" action={<span className="text-[12px] text-muted">Rule-based · from your records</span>}>
             {attention.length ? (
               <ul className="divide-y divide-line">

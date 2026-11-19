@@ -15,6 +15,13 @@
       "when": 1794593313497,
       "tag": "0001_operations",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795109286185,
+      "tag": "0002_growth",
+      "breakpoints": true
     }
   ]
 }

@@ -2,13 +2,13 @@ import Link from "next/link";
 import { CheckCircle2, Plug } from "lucide-react";
 import { getWorkspaceCtx } from "@/server/context";
 import { can } from "@/server/permissions";
-import { catalog, listConnections } from "@/modules/integrations/service";
+import { catalog, listConnections, providerLabel } from "@/modules/integrations/service";
 import { productOptions } from "@/modules/portfolio/service";
 import { ConnectionActions, ResourceMapper } from "@/components/client/integration-panels";
 import { FreshnessBadge, connectionState } from "@/components/freshness";
 import { Badge, NoAccess, PageHeader, Panel } from "@/components/ui";
 import { formatDate, relativeTime } from "@/lib/format";
-import { redirectUri } from "@/integrations/providers/google-search-console";
+import { redirectUri } from "@/integrations/providers/google-oauth";
 
 export const metadata = { title: "Integrations" };
 
@@ -41,7 +41,7 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
             return (
               <Panel
                 key={c.id}
-                title={<span className="flex items-center gap-2">Google Search Console <span className="font-sans text-[13px] text-muted">· {c.accountLabel || "Google account"}</span></span>}
+                title={<span className="flex flex-wrap items-center gap-x-2">{providerLabel(c.provider)} <span className="font-sans text-[13px] text-muted">· {c.accountLabel || "Google account"}</span></span>}
                 action={<FreshnessBadge state={state} at={c.lastSuccessAt} />}
               >
                 <div className="space-y-4 p-4">
@@ -49,7 +49,7 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
                     <p className="rounded-md border border-bad/40 bg-bad-soft px-3 py-2 text-[13px] text-bad">
                       Last error: {c.lastError}
                       {c.status === "needs_reauth" && canManage && (
-                        <> — <a className="underline" href={`/api/integrations/google_search_console/start?workspace=${ctx.workspaceSlug}`}>Reconnect</a></>
+                        <> — <a className="underline" href={`/api/integrations/${c.provider}/start?workspace=${ctx.workspaceSlug}`}>Reconnect</a></>
                       )}
                     </p>
                   )}
@@ -71,7 +71,7 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
                           <tbody>
                             {c.resources.map((r) => (
                               <tr key={r.id}>
-                                <td className="font-mono text-[12.5px]">{r.externalId}</td>
+                                <td className="text-[12.5px]"><span className={c.provider === "google_analytics" ? "" : "font-mono"}>{c.provider === "google_analytics" ? r.name : r.externalId}</span></td>
                                 <td><ResourceMapper slug={ctx.workspaceSlug} resourceId={r.id} productId={r.productId} products={products} canManage={canManage} /></td>
                                 <td className="text-[13px]">{r.dataThrough ? formatDate(r.dataThrough) : <span className="text-muted">—</span>}</td>
                                 <td className="text-[13px] text-muted">{r.lastSyncAt ? relativeTime(r.lastSyncAt) : "Never"}</td>
@@ -81,7 +81,7 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
                         </table>
                       </div>
                     ) : (
-                      <p className="text-[13px] text-muted">No verified properties found for this Google account. Verify your site in Search Console, then rediscover.</p>
+                      <p className="text-[13px] text-muted">{c.provider === "google_analytics" ? "No GA4 properties found for this Google account. Check you have at least Viewer access in Google Analytics, then rediscover." : "No verified properties found for this Google account. Verify your site in Search Console, then rediscover."}</p>
                     )}
                   </div>
 
@@ -134,13 +134,13 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
             <div className="mt-4">
               {e.state === "available" && e.configured && canManage && (
                 <a href={`/api/integrations/${e.id}/start?workspace=${ctx.workspaceSlug}`} className="btn btn-primary">
-                  <Plug className="size-4" /> {connections.length ? "Connect another account" : "Connect"}
+                  <Plug className="size-4" /> {connections.some((c) => c.provider === e.id) ? "Connect another account" : "Connect"}
                 </a>
               )}
               {e.state === "available" && !e.configured && (
                 <div className="rounded-md border border-line bg-sunken p-3 text-[12.5px] text-ink-2">
                   An administrator must create a Google OAuth client (Web application) and set <code className="font-mono">{e.envVars.join(", ")}</code> on the server.
-                  Authorised redirect URI: <code className="break-all font-mono">{redirectUri()}</code>
+                  Authorised redirect URI: <code className="break-all font-mono">{redirectUri(e.id)}</code>
                 </div>
               )}
             </div>
@@ -148,7 +148,7 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
         ))}
       </div>
       <p className="mt-4 text-[12px] text-muted">
-        Planned connectors are listed for transparency; they are not available yet. See <Link className="link" href={`/w/${ctx.workspaceSlug}/seo`}>SEO</Link> for Search Console data.
+        Planned connectors are listed for transparency; they are not available yet. See <Link className="link" href={`/w/${ctx.workspaceSlug}/seo`}>SEO</Link> for Search Console data and <Link className="link" href={`/w/${ctx.workspaceSlug}/growth`}>Growth</Link> for Analytics.
       </p>
     </>
   );

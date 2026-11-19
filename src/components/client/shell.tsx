@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
-  Activity, BookOpen, Bot, Check, ChevronsUpDown, CircleDollarSign, FileText, Home, Inbox, LayoutGrid, ListChecks, LogOut,
-  Map as MapIcon, Menu, Moon, Plug, Plus, Search, Settings, Sun, SunMoon, TrendingUp, Workflow, X,
+  Activity, BarChart3, BookOpen, Bot, Check, ChevronsUpDown, CircleDollarSign, FileText, Home, Inbox, LayoutGrid, ListChecks, LogOut,
+  Map as MapIcon, Menu, Moon, PenSquare, Plug, Plus, Search, Settings, Sun, SunMoon, TrendingUp, Workflow, X,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/format";
 import { Logo } from "@/components/ui";
 
-type Nav = { href: string; label: string; icon: React.ComponentType<{ className?: string }>; exact?: boolean };
+type Nav = { href: string; label: string; icon: React.ComponentType<{ className?: string }>; exact?: boolean; badge?: number };
 
 export type ShellProps = {
   slug: string;
@@ -19,10 +19,94 @@ export type ShellProps = {
   workspaces: { slug: string; name: string; role: string }[];
   products: { slug: string; name: string; brandColor: string; pinned: boolean }[];
   user: { name: string; email: string };
-  caps: { finance: boolean; audit: boolean; seo: boolean; planning: boolean; automation: boolean; agents: boolean; integrations: boolean };
+  caps: {
+    finance: boolean; audit: boolean; seo: boolean; planning: boolean; automation: boolean; agents: boolean; integrations: boolean;
+    content: boolean; growth: boolean; work: boolean; newContent: boolean;
+  };
   inboxCount?: number;
   children: React.ReactNode;
 };
+
+/** Navigation grouped by job: run the portfolio, grow it, operate it. Only modules the role can see appear. */
+function navGroups(slug: string, caps: ShellProps["caps"], inboxCount: number): { label?: string; items: Nav[] }[] {
+  const base = `/w/${slug}`;
+  const groups: { label?: string; items: Nav[] }[] = [
+    {
+      items: [
+        { href: base, label: "Command center", icon: Home, exact: true },
+        { href: `${base}/inbox`, label: "Inbox", icon: Inbox, badge: inboxCount },
+        { href: `${base}/products`, label: "Portfolio", icon: LayoutGrid },
+        ...(caps.work ? [{ href: `${base}/work`, label: "Work", icon: ListChecks }] : []),
+        ...(caps.planning ? [{ href: `${base}/roadmap`, label: "Roadmap & goals", icon: MapIcon }] : []),
+        { href: `${base}/docs`, label: "Docs & decisions", icon: BookOpen },
+      ],
+    },
+    {
+      label: "Grow",
+      items: [
+        ...(caps.growth ? [{ href: `${base}/growth`, label: "Growth", icon: BarChart3 }] : []),
+        ...(caps.content ? [{ href: `${base}/content`, label: "Content", icon: PenSquare }] : []),
+        ...(caps.seo ? [{ href: `${base}/seo`, label: "SEO", icon: TrendingUp }] : []),
+      ],
+    },
+    {
+      label: "Operate",
+      items: [
+        ...(caps.agents ? [{ href: `${base}/agents`, label: "Agents", icon: Bot }] : []),
+        ...(caps.automation ? [{ href: `${base}/automations`, label: "Automations", icon: Workflow }] : []),
+        ...(caps.finance ? [{ href: `${base}/finance`, label: "Finance", icon: CircleDollarSign }] : []),
+        ...(caps.integrations ? [{ href: `${base}/integrations`, label: "Integrations", icon: Plug }] : []),
+        ...(caps.audit ? [{ href: `${base}/activity`, label: "Activity", icon: Activity }] : []),
+        { href: `${base}/settings`, label: "Settings", icon: Settings },
+      ],
+    },
+  ];
+  return groups.filter((g) => g.items.length);
+}
+
+function Count({ n, inverted }: { n?: number; inverted?: boolean }) {
+  if (!n) return null;
+  return (
+    <span className={cn("ml-auto min-w-5 rounded-full px-1.5 text-center text-[11px] font-semibold leading-5 tabular-nums", inverted ? "bg-bg text-ink" : "bg-cobalt text-on-cobalt")}>
+      {n > 99 ? "99+" : n}
+    </span>
+  );
+}
+
+/** Phone-sized primary navigation: the four places you check most, plus everything else in the drawer. */
+function BottomBar({ slug, caps, inboxCount, onMenu }: { slug: string; caps: ShellProps["caps"]; inboxCount: number; onMenu: () => void }) {
+  const pathname = usePathname();
+  const base = `/w/${slug}`;
+  const items: Nav[] = [
+    { href: base, label: "Home", icon: Home, exact: true },
+    caps.work ? { href: `${base}/work`, label: "Work", icon: ListChecks } : { href: `${base}/products`, label: "Portfolio", icon: LayoutGrid },
+    { href: `${base}/inbox`, label: "Inbox", icon: Inbox, badge: inboxCount },
+    caps.growth ? { href: `${base}/growth`, label: "Growth", icon: BarChart3 } : caps.content ? { href: `${base}/content`, label: "Content", icon: PenSquare } : { href: `${base}/docs`, label: "Docs", icon: BookOpen },
+  ];
+  const active = (n: Nav) => (n.exact ? pathname === n.href : pathname === n.href || pathname.startsWith(`${n.href}/`));
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label="Primary">
+      <ul className="mx-auto grid max-w-lg grid-cols-5">
+        {items.map((n) => (
+          <li key={n.href}>
+            <Link href={n.href} aria-current={active(n) ? "page" : undefined}
+              className={cn("relative flex h-14 flex-col items-center justify-center gap-0.5 text-[10.5px]", active(n) ? "text-cobalt" : "text-muted")}>
+              <n.icon className="size-5" />
+              {n.label}
+              {n.badge ? <span className="absolute left-1/2 top-1.5 ml-1.5 min-w-4 rounded-full bg-bad px-1 text-center text-[10px] font-semibold leading-4 text-white">{n.badge > 99 ? "99+" : n.badge}</span> : null}
+            </Link>
+          </li>
+        ))}
+        <li>
+          <button type="button" onClick={onMenu} className="flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[10.5px] text-muted" aria-label="Open navigation">
+            <Menu className="size-5" />
+            More
+          </button>
+        </li>
+      </ul>
+    </nav>
+  );
+}
 
 export function Shell(props: ShellProps) {
   const [drawer, setDrawer] = useState(false);
@@ -64,34 +148,21 @@ export function Shell(props: ShellProps) {
       )}
 
       <main className="min-w-0">
-        <div className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">{props.children}</div>
+        <div className="mx-auto w-full max-w-[1240px] px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] pt-6 sm:px-6 lg:px-10 lg:py-9">{props.children}</div>
       </main>
+      <BottomBar slug={props.slug} caps={props.caps} inboxCount={props.inboxCount ?? 0} onMenu={() => setDrawer(true)} />
       <CommandPalette slug={props.slug} products={props.products} caps={props.caps} />
     </div>
   );
 }
 
-function Sidebar({ slug, workspaceName, workspaces, products, user, caps }: ShellProps) {
+function Sidebar({ slug, workspaceName, workspaces, products, user, caps, inboxCount }: ShellProps) {
   const pathname = usePathname();
   const base = `/w/${slug}`;
-  const nav: Nav[] = [
-    { href: base, label: "Command center", icon: Home, exact: true },
-    { href: `${base}/inbox`, label: "Inbox", icon: Inbox },
-    { href: `${base}/products`, label: "Portfolio", icon: LayoutGrid },
-    { href: `${base}/work`, label: "Work", icon: ListChecks },
-    ...(caps.planning ? [{ href: `${base}/roadmap`, label: "Roadmap & goals", icon: MapIcon }] : []),
-    { href: `${base}/docs`, label: "Docs & decisions", icon: BookOpen },
-    ...(caps.seo ? [{ href: `${base}/seo`, label: "SEO", icon: TrendingUp }] : []),
-    ...(caps.finance ? [{ href: `${base}/finance`, label: "Finance", icon: CircleDollarSign }] : []),
-    ...(caps.automation ? [{ href: `${base}/automations`, label: "Automations", icon: Workflow }] : []),
-    ...(caps.agents ? [{ href: `${base}/agents`, label: "Agents", icon: Bot }] : []),
-    ...(caps.integrations ? [{ href: `${base}/integrations`, label: "Integrations", icon: Plug }] : []),
-    ...(caps.audit ? [{ href: `${base}/activity`, label: "Activity", icon: Activity }] : []),
-    { href: `${base}/settings`, label: "Settings", icon: Settings },
-  ];
+  const groups = navGroups(slug, caps, inboxCount ?? 0);
   const isActive = (n: Nav) => (n.exact ? pathname === n.href : pathname === n.href || pathname.startsWith(`${n.href}/`));
   const shown = products.filter((p) => p.pinned).slice(0, 8);
-  const list = shown.length ? shown : products.slice(0, 6);
+  const list = shown.length ? shown : products.slice(0, 9);
 
   return (
     <div className="flex h-full flex-col">
@@ -105,23 +176,29 @@ function Sidebar({ slug, workspaceName, workspaces, products, user, caps }: Shel
         <PaletteButton />
       </div>
       <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label="Main">
-        <ul className="space-y-0.5">
-          {nav.map((n) => (
-            <li key={n.href}>
-              <Link
-                href={n.href}
-                aria-current={isActive(n) ? "page" : undefined}
-                className={cn(
-                  "flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] transition-colors",
-                  isActive(n) ? "bg-ink text-bg" : "text-ink-2 hover:bg-sunken hover:text-ink",
-                )}
-              >
-                <n.icon className="size-4 shrink-0" />
-                {n.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {groups.map((g, gi) => (
+          <div key={g.label ?? gi} className={gi ? "mt-4" : undefined}>
+            {g.label && <div className="eyebrow mb-1 px-2.5">{g.label}</div>}
+            <ul className="space-y-0.5">
+              {g.items.map((n) => (
+                <li key={n.href}>
+                  <Link
+                    href={n.href}
+                    aria-current={isActive(n) ? "page" : undefined}
+                    className={cn(
+                      "flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] transition-colors lg:h-8",
+                      isActive(n) ? "bg-ink text-bg" : "text-ink-2 hover:bg-sunken hover:text-ink",
+                    )}
+                  >
+                    <n.icon className="size-4 shrink-0" />
+                    {n.label}
+                    <Count n={n.badge} inverted={isActive(n)} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
 
         <div className="mt-6 flex items-center justify-between px-2.5">
           <span className="eyebrow">{shown.length ? "Pinned" : "Products"}</span>
@@ -305,6 +382,15 @@ function CommandPalette({ slug, products, caps }: { slug: string; products: Shel
       { id: "work", label: "Work", href: `${base}/work`, icon: ListChecks },
       { id: "my-work", label: "My open tasks", href: `${base}/work?assignee=me`, icon: ListChecks },
       { id: "docs", label: "Docs & decisions", href: `${base}/docs`, icon: BookOpen },
+      ...(caps.newContent ? [{ id: "new-post", label: "New blog post", href: `${base}/content/new`, icon: PenSquare }] : []),
+      ...(caps.growth ? [{ id: "growth", label: "Growth", hint: "Traffic, search, content", href: `${base}/growth`, icon: BarChart3 }] : []),
+      ...(caps.content ? [{ id: "content", label: "Content studio", href: `${base}/content`, icon: PenSquare }] : []),
+      ...(caps.content ? [{ id: "review", label: "Posts waiting for review", href: `${base}/content?status=in_review`, icon: PenSquare }] : []),
+      { id: "inbox", label: "Inbox", href: `${base}/inbox`, icon: Inbox },
+      ...(caps.seo ? [{ id: "seo", label: "SEO", href: `${base}/seo`, icon: TrendingUp }] : []),
+      ...(caps.agents ? [{ id: "agents", label: "Agents", href: `${base}/agents`, icon: Bot }] : []),
+      ...(caps.automation ? [{ id: "automations", label: "Automations", href: `${base}/automations`, icon: Workflow }] : []),
+      ...(caps.integrations ? [{ id: "integrations", label: "Integrations", href: `${base}/integrations`, icon: Plug }] : []),
       ...(caps.finance ? [{ id: "finance", label: "Finance", href: `${base}/finance`, icon: CircleDollarSign }] : []),
       ...(caps.audit ? [{ id: "activity", label: "Activity", href: `${base}/activity`, icon: Activity }] : []),
       { id: "settings", label: "Settings", href: `${base}/settings`, icon: Settings },
@@ -315,7 +401,7 @@ function CommandPalette({ slug, products, caps }: { slug: string; products: Shel
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    const local = term ? staticItems.filter((i) => i.label.toLowerCase().includes(term)) : staticItems.slice(0, 11);
+    const local = term ? staticItems.filter((i) => i.label.toLowerCase().includes(term)) : staticItems.slice(0, 14);
     const seen = new Set(local.map((i) => i.href));
     // Remote results only apply to queries long enough to have been searched.
     const hits = term.length >= 2 ? remote : [];

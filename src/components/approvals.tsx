@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Ctx } from "@/server/permissions";
 import { can } from "@/server/permissions";
 import { listApprovals } from "@/modules/automation/inbox";
@@ -23,6 +24,9 @@ export async function ApprovalsPanel({ ctx, empty = true }: { ctx: Ctx; empty?: 
                   <Badge tone={a.risk === "high" ? "bad" : a.risk === "medium" ? "warn" : "outline"}>{a.risk} risk</Badge>
                 </div>
                 <div className="mt-1 font-medium">{a.summary}</div>
+                {a.action === "content.publish" && typeof a.payload.postId === "string" && (
+                  <Link href={`/w/${ctx.workspaceSlug}/content/${a.payload.postId}`} className="link text-[12.5px]">Read the post before deciding →</Link>
+                )}
                 <details className="mt-1 text-[12px]">
                   <summary className="cursor-pointer text-muted">Exact payload ({a.action})</summary>
                   <pre className="mt-1 max-h-48 overflow-auto rounded-md bg-sunken p-2 font-mono text-[11.5px] whitespace-pre-wrap">{JSON.stringify(a.payload, null, 2)}</pre>
