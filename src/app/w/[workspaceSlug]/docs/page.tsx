@@ -24,12 +24,12 @@ export default async function DocsPage({ params, searchParams }: PageProps<"/w/[
   const newLink = can(ctx, "docs.edit") ? <Link href={`/w/${ctx.workspaceSlug}/docs/new`} className="btn btn-primary"><Plus className="size-4" /> New document</Link> : null;
   return (
     <>
-      <PageHeader title="Docs & decisions" description="The written memory of your products: specs, runbooks, notes and the decisions behind them." actions={newLink} />
+      <PageHeader title="Docs & decisions" description="The written memory of your projects: specs, runbooks, notes and the decisions behind them." actions={newLink} />
       <FilterBar
         searchPlaceholder="Search titles and content"
         fields={[
           { name: "kind", label: "All kinds", options: DOC_KINDS.map((k) => ({ value: k, label: docLabel(k) })) },
-          { name: "product", label: "All products", options: products.map((p) => ({ value: p.id, label: p.name })) },
+          { name: "product", label: "All projects", options: products.map((p) => ({ value: p.id, label: p.name })) },
         ]}
       />
       <DocList slug={ctx.workspaceSlug} docs={docs} emptyAction={newLink} />

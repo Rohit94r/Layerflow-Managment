@@ -12,3 +12,4 @@ export * from "../../modules/agents/schema";
 export * from "../../modules/planning/schema";
 export * from "../../modules/content/schema";
 export * from "../../modules/analytics/schema";
+export * from "../../modules/deploys/schema";

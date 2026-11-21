@@ -11,7 +11,7 @@ import { GroupManager } from "@/components/client/group-manager";
 import { EmptyState, HealthBadge, LifecycleBadge, NoAccess, PageHeader, ProductMark } from "@/components/ui";
 import { cn } from "@/lib/format";
 
-export const metadata = { title: "Portfolio" };
+export const metadata = { title: "Projects" };
 
 const pick = <T extends string>(v: unknown, xs: readonly T[]) => (typeof v === "string" && (xs as readonly string[]).includes(v) ? (v as T) : undefined);
 const opts = (xs: readonly string[]) => xs.filter((x) => x !== "none").map((v) => ({ value: v, label: label(v) }));
@@ -52,13 +52,13 @@ export default async function PortfolioPage({ params, searchParams }: PageProps<
   return (
     <>
       <PageHeader
-        title="Portfolio"
-        description="Every product, its stage and what it needs."
+        title="Projects"
+        description="Every project, its stage and what it needs."
         actions={
           <>
             <GroupManager slug={ctx.workspaceSlug} groups={groups} canEdit={can(ctx, "product.edit")} />
             {can(ctx, "product.create") && (
-              <Link href={`${base}/products/new`} className="btn btn-primary"><Plus className="size-4" /> New product</Link>
+              <Link href={`${base}/products/new`} className="btn btn-primary"><Plus className="size-4" /> New project</Link>
             )}
           </>
         }
@@ -106,16 +106,16 @@ export default async function PortfolioPage({ params, searchParams }: PageProps<
       {!rows.length ? (
         <div className="panel">
           <EmptyState
-            title={filtered ? "No products match" : archived ? "Nothing archived" : "Your portfolio is empty"}
-            action={!filtered && !archived && can(ctx, "product.create") ? <Link href={`${base}/products/new`} className="btn btn-primary"><Plus className="size-4" /> Add your first product</Link> : undefined}
+            title={filtered ? "No projects match" : archived ? "Nothing archived" : "No projects yet"}
+            action={!filtered && !archived && can(ctx, "product.create") ? <Link href={`${base}/products/new`} className="btn btn-primary"><Plus className="size-4" /> Add your first project</Link> : undefined}
           >
-            {filtered ? "Try clearing a filter." : archived ? "Archived products appear here and can be restored." : "Add every product you run — live, half-built or just an idea — and see them side by side."}
+            {filtered ? "Try clearing a filter." : archived ? "Archived projects appear here and can be restored." : "Add every project you run — live, half-built or just an idea — and see them side by side."}
           </EmptyState>
         </div>
       ) : (
         <>
         {/* Cards on phones regardless of view; the table only on wider screens. */}
-        <div className={cn("grid gap-4 sm:grid-cols-2 xl:grid-cols-3", layout === "table" && "md:hidden")}>
+        <div className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3", layout === "table" && "md:hidden")}>
           {rows.map((p) => (
             <Link key={p.id} href={`${base}/products/${p.slug}`} className="panel group flex flex-col p-4 transition-colors hover:border-cobalt">
               <div className="flex items-start gap-3">
@@ -141,7 +141,7 @@ export default async function PortfolioPage({ params, searchParams }: PageProps<
         )}
         </>
       )}
-      <p className="mt-3 text-[12px] text-muted">{rows.length} product{rows.length === 1 ? "" : "s"}</p>
+      <p className="mt-3 text-[12px] text-muted">{rows.length} project{rows.length === 1 ? "" : "s"}</p>
     </>
   );
 }

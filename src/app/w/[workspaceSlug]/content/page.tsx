@@ -41,7 +41,7 @@ export default async function ContentPage({ params, searchParams }: PageProps<"/
     <>
       <PageHeader
         title="Content"
-        description="Plan, write, review and publish blog posts for every product. Agents can draft; your publishing policy decides what goes live."
+        description="Plan, write, review and publish blog posts for every project. Agents can draft; your publishing policy decides what goes live."
         actions={
           <>
             {can(ctx, "agent.view") && <Link href={`${base}/agents`} className="btn btn-secondary"><Bot className="size-4" /> Content agents</Link>}
@@ -72,7 +72,7 @@ export default async function ContentPage({ params, searchParams }: PageProps<"/
         <form className="flex w-full gap-2 sm:w-auto" action={`${base}/content`}>
           {status && <input type="hidden" name="status" value={status} />}
           <select name="product" defaultValue={productSlug} className="input w-auto min-w-0 flex-1 sm:w-48 sm:flex-none" aria-label="Product">
-            <option value="">All products</option>
+            <option value="">All projects</option>
             {products.map((p) => <option key={p.id} value={p.slug}>{p.name}</option>)}
           </select>
           <input name="q" defaultValue={q} placeholder="Search titles, keywords" className="input min-w-0 flex-1 sm:w-48" aria-label="Search posts" />

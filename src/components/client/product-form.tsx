@@ -12,7 +12,7 @@ export type ProductFormValues = Partial<{
   strategicObjective: string; techStack: string[]; tags: string[]; launchDate: string | null; nextReviewDate: string | null;
 }>;
 
-const SWATCHES = ["#1D36C9", "#0B1557", "#2E6B45", "#A3262C", "#9A5A0C", "#6D3FC0", "#0E7490", "#BE185D"];
+const SWATCHES = ["#171717", "#525252", "#A3A3A3", "#1F7A3F", "#B42318", "#9A5B06", "#1D4ED8", "#7C3AED"];
 
 function Select({ name, label: l, value, options, hint }: { name: string; label: string; value?: string | null; options: { value: string; label: string }[]; hint?: string }) {
   return (
@@ -74,7 +74,7 @@ export function ProductForm({
         <div>
           <label className="label" htmlFor="brandColor">Colour</label>
           <div className="flex items-center gap-2">
-            <input id="brandColor" name="brandColor" type="color" defaultValue={v.brandColor ?? "#1D36C9"} className="h-[2.125rem] w-12 cursor-pointer rounded-md border border-line-strong bg-surface p-1" />
+            <input id="brandColor" name="brandColor" type="color" defaultValue={v.brandColor ?? "#171717"} className="h-[2.125rem] w-12 cursor-pointer rounded-md border border-line-strong bg-surface p-1" />
             <div className="flex flex-wrap gap-1">
               {SWATCHES.map((c) => (
                 <button
@@ -96,14 +96,14 @@ export function ProductForm({
           <div className="sm:col-span-2">
             <label className="label" htmlFor="slug">URL address</label>
             <input id="slug" name="slug" className="input font-mono text-[13px]" defaultValue={v.slug} maxLength={48} />
-            <p className="hint">Changing this changes the product&apos;s links.</p>
+            <p className="hint">Changing this changes the project&apos;s links.</p>
           </div>
         )}
       </Section>
 
       <Section title="Classification" description="Five independent dimensions. Stage is not health, and priority is not focus.">
         <Select name="lifecycle" label="Stage" value={v.lifecycle ?? "idea"} options={opts(LIFECYCLES)} />
-        <Select name="role" label="Role in portfolio" value={v.role ?? "secondary"} options={opts(PRODUCT_ROLES)} />
+        <Select name="role" label="Role among your projects" value={v.role ?? "secondary"} options={opts(PRODUCT_ROLES)} />
         <Select name="priority" label="Priority" value={v.priority ?? "p2"} options={opts(PRIORITIES)} />
         <Select name="focus" label="Focus" value={v.focus ?? "none"} options={opts(FOCUSES).map((o) => (o.value === "none" ? { ...o, label: "None" } : o))} />
         <Select name="health" label="Health" value={v.health ?? "unknown"} options={opts(HEALTHS)} hint="Your assessment. Leave Unknown until you have evidence." />
@@ -116,7 +116,7 @@ export function ProductForm({
       <Section title="Ownership" description="Who is accountable, and where it sits.">
         <Select name="ownerId" label="Owner" value={v.ownerId} options={[{ value: "", label: v.name ? "Unassigned" : "Me (default)" }, ...people.map((p) => ({ value: p.id, label: p.name }))]} />
         <Select name="groupId" label="Group" value={v.groupId} options={[{ value: "", label: "No group" }, ...groups.map((g) => ({ value: g.id, label: g.name }))]} />
-        <Select name="parentId" label="Parent product" value={v.parentId} options={[{ value: "", label: "None" }, ...products.map((p) => ({ value: p.id, label: p.name }))]} />
+        <Select name="parentId" label="Parent project" value={v.parentId} options={[{ value: "", label: "None" }, ...products.map((p) => ({ value: p.id, label: p.name }))]} />
         <div>
           <label className="label" htmlFor="nextReviewDate">Next review</label>
           <input id="nextReviewDate" name="nextReviewDate" type="date" className="input" defaultValue={v.nextReviewDate ?? ""} />

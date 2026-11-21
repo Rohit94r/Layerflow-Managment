@@ -74,7 +74,7 @@ function Metric({ label, value, delta, empty }: { label: string; value?: string;
 
 /** Every product on one screen: delivery, search, traffic and content. Stacked cards on phones. */
 export function PulseTable({ slug, rows }: { slug: string; rows: PulseRow[] }) {
-  if (!rows.length) return <EmptyState compact title="No products yet">Add products to see their pulse side by side.</EmptyState>;
+  if (!rows.length) return <EmptyState compact title="No projects yet">Add projects to see their pulse side by side.</EmptyState>;
   const base = `/w/${slug}/products`;
   return (
     <>
@@ -102,7 +102,7 @@ export function PulseTable({ slug, rows }: { slug: string; rows: PulseRow[] }) {
         <table className="table">
           <thead>
             <tr>
-              <th>Product</th><th>Health</th><th className="text-right" title="Open tasks / overdue">Tasks</th>
+              <th>Project</th><th>Health</th><th className="text-right" title="Open tasks / overdue">Tasks</th>
               <th className="text-right" title="Google Search Console clicks, last 28 days">Clicks</th><th className="text-right" title="Google Analytics sessions, last 28 days">Sessions</th>
               <th className="text-right" title="GA4 key events, last 28 days">Key ev.</th><th className="text-right" title="Posts published in the last 30 days">Posts</th>
             </tr>
@@ -155,7 +155,7 @@ export async function AnalyticsPerformance({ ctx, resourceId, title = "Traffic" 
   if (!o.current) {
     return (
       <Panel title={title}>
-        <EmptyState compact title="No analytics data yet">The first sync runs after you map this property to a product. Data appears once Google returns it.</EmptyState>
+        <EmptyState compact title="No analytics data yet">The first sync runs after you map this property to a project. Data appears once Google returns it.</EmptyState>
       </Panel>
     );
   }
@@ -187,7 +187,7 @@ export async function AnalyticsPerformance({ ctx, resourceId, title = "Traffic" 
           <SourceNote>Source: Google Analytics 4 Data API · aggregated, no user-level data · the latest 1–2 days may still be processing.</SourceNote>
         </div>
       </Panel>
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <BreakdownTable title="Channels" rows={o.channels} />
         <BreakdownTable title="Landing pages" rows={o.landingPages} mono />
       </div>
@@ -228,7 +228,7 @@ export function NoAnalytics({ slug, canManage }: { slug: string; canManage: bool
         title="Google Analytics isn't connected"
         action={canManage ? <Link href={`/w/${slug}/integrations`} className="btn btn-primary">Connect Google Analytics</Link> : undefined}
       >
-        Connect read-only GA4 access and map each property to a product to see sessions, key events, channels and landing pages here, and to get traffic-drop alerts.
+        Connect read-only GA4 access and map each property to a project to see sessions, key events, channels and landing pages here, and to get traffic-drop alerts.
       </EmptyState>
     </div>
   );
@@ -240,7 +240,7 @@ export function AgentNudge({ slug }: { slug: string }) {
       <Bot className="size-5 shrink-0 text-cobalt" />
       <div className="min-w-0 flex-1">
         <div className="font-medium">Put growth on a schedule</div>
-        <div className="text-[12.5px] text-muted">Install the Growth Analyst for a weekly review, and a Content Writer per product for a steady stream of SEO drafts.</div>
+        <div className="text-[12.5px] text-muted">Install the Growth Analyst for a weekly review, and a Content Writer per project for a steady stream of SEO drafts.</div>
       </div>
       <Badge tone="cobalt">Agents</Badge>
     </Link>

@@ -1,9 +1,9 @@
-import { Download } from "lucide-react";
+import Link from "next/link";
+import { Download, Users } from "lucide-react";
 import { getWorkspaceCtx } from "@/server/context";
 import { can, ROLE_CAPABILITIES } from "@/server/permissions";
-import { listInvitations, listMembers } from "@/modules/identity/service";
 import { ROLE_LABELS } from "@/modules/identity/constants";
-import { DeleteWorkspaceForm, InviteForm, MembersTable, WorkspaceSettingsForm } from "@/components/client/settings-forms";
+import { DeleteWorkspaceForm, WorkspaceSettingsForm } from "@/components/client/settings-forms";
 import { PageHeader, Panel } from "@/components/ui";
 
 export const metadata = { title: "Settings" };
@@ -12,11 +12,6 @@ export default async function SettingsPage({ params }: PageProps<"/w/[workspaceS
   const { workspaceSlug } = await params;
   const ctx = await getWorkspaceCtx(workspaceSlug);
   const slug = ctx.workspaceSlug;
-  const canManageMembers = can(ctx, "members.manage");
-  const [members, invitations] = await Promise.all([
-    can(ctx, "members.view") ? listMembers(ctx) : [],
-    canManageMembers ? listInvitations(ctx) : [],
-  ]);
 
   return (
     <>
@@ -27,16 +22,12 @@ export default async function SettingsPage({ params }: PageProps<"/w/[workspaceS
         </Panel>
 
         {can(ctx, "members.view") && (
-          <section id="members" className="scroll-mt-6">
-            <Panel title="Members" action={<span className="text-[12px] text-muted">{members.length} member{members.length === 1 ? "" : "s"}</span>}>
-              <MembersTable slug={slug} members={members} me={ctx.userId} myRole={ctx.role} canManage={canManageMembers} />
-              {canManageMembers && (
-                <div className="border-t border-line">
-                  <InviteForm slug={slug} invitations={invitations} />
-                </div>
-              )}
-            </Panel>
-          </section>
+          <Panel title="Team">
+            <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center">
+              <p className="flex-1 text-[13.5px] text-ink-2">Members, roles and invitations are on the Team page.</p>
+              <Link href={`/w/${slug}/team`} className="btn btn-secondary"><Users className="size-4" /> Open Team</Link>
+            </div>
+          </Panel>
         )}
 
         <Panel title="Your permissions">
@@ -51,7 +42,7 @@ export default async function SettingsPage({ params }: PageProps<"/w/[workspaceS
         {can(ctx, "data.export") && (
           <Panel title="Export">
             <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center">
-              <p className="flex-1 text-[13.5px] text-ink-2">Download everything in this workspace as JSON: products, tasks, comments, docs, finance and the full activity log. Your data is never locked in.</p>
+              <p className="flex-1 text-[13.5px] text-ink-2">Download everything in this workspace as JSON: projects, tasks, comments, docs, finance and the full activity log. Your data is never locked in.</p>
               <a href={`/api/w/${slug}/export`} className="btn btn-secondary" download>
                 <Download className="size-4" /> Export JSON
               </a>

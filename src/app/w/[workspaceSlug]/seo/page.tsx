@@ -19,7 +19,7 @@ export default async function SeoPage({ params }: PageProps<"/w/[workspaceSlug]/
     <>
       <PageHeader
         title="SEO"
-        description="Search performance from Google Search Console across your products, with evidence-backed opportunities you can turn into tasks. Technical audits and uptime live on each product's SEO tab."
+        description="Search performance from Google Search Console across your projects, with evidence-backed opportunities you can turn into tasks. Technical audits and uptime live on each project's SEO tab."
         actions={can(ctx, "integration.view") ? <Link href={`/w/${ctx.workspaceSlug}/integrations`} className="btn btn-secondary">Manage connection</Link> : undefined}
       />
       {!props.length ? (
@@ -28,14 +28,14 @@ export default async function SeoPage({ params }: PageProps<"/w/[workspaceSlug]/
             title="Search Console isn't connected"
             action={can(ctx, "integration.manage") ? <Link href={`/w/${ctx.workspaceSlug}/integrations`} className="btn btn-primary">Connect Google Search Console</Link> : undefined}
           >
-            Connect read-only Search Console access, map each property to a product, and this page fills with clicks, impressions, CTR, rankings and opportunities.
+            Connect read-only Search Console access, map each property to a project, and this page fills with clicks, impressions, CTR, rankings and opportunities.
           </EmptyState>
         </div>
       ) : (
         <div className="space-y-6">
           {props.length > mapped.length && (
             <p className="rounded-md border border-warn/40 bg-warn-soft/60 px-4 py-2.5 text-[13px] text-warn">
-              {props.length - mapped.length} propert{props.length - mapped.length === 1 ? "y is" : "ies are"} not mapped to a product and won&apos;t be synced.{" "}
+              {props.length - mapped.length} propert{props.length - mapped.length === 1 ? "y is" : "ies are"} not mapped to a project and won&apos;t be synced.{" "}
               <Link href={`/w/${ctx.workspaceSlug}/integrations`} className="underline">Map them</Link>
             </p>
           )}

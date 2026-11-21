@@ -11,7 +11,7 @@ export default async function ProductAgents({ params }: PageProps<"/w/[workspace
   if (!can(ctx, "agent.view")) return <NoAccess what="agents" />;
   const agents = await listAgents(ctx, product.id);
   return (
-    <Panel title="Agents scoped to this product" action={<Link href={`/w/${ctx.workspaceSlug}/agents`} className="link text-[12.5px]">Agent catalog</Link>}>
+    <Panel title="Agents scoped to this project" action={<Link href={`/w/${ctx.workspaceSlug}/agents`} className="link text-[12.5px]">Agent catalog</Link>}>
       <AgentList slug={ctx.workspaceSlug} agents={agents} />
     </Panel>
   );

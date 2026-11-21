@@ -9,5 +9,8 @@ export async function register() {
     }
     const { ensureDb } = await import("./server/db");
     await ensureDb();
+    // Create or repair the built-in administrator account (src/server/auth/admin.ts).
+    const { ensureAdminAccount } = await import("./modules/identity/service");
+    await ensureAdminAccount().catch((err) => console.error("[admin] Could not prepare the administrator account:", err));
   }
 }

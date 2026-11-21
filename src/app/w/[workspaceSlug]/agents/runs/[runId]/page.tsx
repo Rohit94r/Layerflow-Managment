@@ -47,7 +47,7 @@ export default async function RunPage({ params }: PageProps<"/w/[workspaceSlug]/
         ))}
       </div>
       {run.error && <p className="mb-6 rounded-md border border-bad/40 bg-bad-soft px-4 py-2.5 text-[13.5px] text-bad">{run.error}</p>}
-      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel title="Timeline" action={<span className="text-[12px] text-muted">Action summaries and tool calls · no hidden reasoning</span>}>
           <ol className="divide-y divide-line">
             {run.steps.map((s) => (

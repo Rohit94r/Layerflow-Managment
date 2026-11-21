@@ -10,7 +10,7 @@ export default async function SignInPage() {
   return (
     <>
       <h1 className="text-[2rem] leading-tight">Welcome back</h1>
-      <p className="mb-7 mt-1.5 text-ink-2">Sign in to your portfolio.</p>
+      <p className="mb-7 mt-1.5 text-ink-2">Sign in to manage your projects and team.</p>
       <Suspense>
         <AuthForm mode="sign-in" />
       </Suspense>

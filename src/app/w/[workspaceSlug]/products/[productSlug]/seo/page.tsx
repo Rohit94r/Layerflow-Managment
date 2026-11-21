@@ -31,7 +31,7 @@ export default async function ProductSeo({ params }: PageProps<"/w/[workspaceSlu
       <Panel title="SEO opportunities" action={<span className="text-[12px] text-muted">{insights.length} open · rule-based</span>}>
         <InsightList ctx={ctx} insights={insights} />
       </Panel>
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <TechnicalAudit ctx={ctx} productId={product.id} hasSite={hasSite} />
         <UptimePanel ctx={ctx} productId={product.id} hasSite={hasSite} />
       </div>

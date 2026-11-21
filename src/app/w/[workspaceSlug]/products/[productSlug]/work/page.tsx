@@ -17,7 +17,7 @@ export default async function ProductWork({ params, searchParams }: PageProps<"/
   return (
     <>
       <FilterBar
-        searchPlaceholder="Search this product's work"
+        searchPlaceholder="Search this project's work"
         fields={[
           { name: "assignee", label: "Assignee", options: [{ value: "me", label: "Me" }, { value: "none", label: "Unassigned" }, ...people.map((p) => ({ value: p.id, label: p.name }))] },
           { name: "type", label: "Type", options: TASK_TYPES.map((t) => ({ value: t, label: taskLabel(t) })) },

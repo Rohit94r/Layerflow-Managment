@@ -1,3 +1,3 @@
-/** Single place for naming. The product name is still provisional (BUILD.md §15). */
-export const APP_NAME = "LayerFlow OS";
-export const APP_TAGLINE = "The operating system for founders who run more than one product.";
+/** Single place for naming. */
+export const APP_NAME = "Flotilla";
+export const APP_TAGLINE = "Manage every project you run, and the team that runs them, in one place.";

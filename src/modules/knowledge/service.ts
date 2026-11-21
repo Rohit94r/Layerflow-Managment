@@ -30,7 +30,7 @@ export const docPatch = docInput.partial();
 async function assertProduct(ctx: Ctx, productId: string | null | undefined) {
   if (!productId) return;
   const [p] = await db.select({ id: product.id }).from(product).where(and(eq(product.id, productId), eq(product.workspaceId, ctx.workspaceId)));
-  if (!p) throw invalid("Unknown product.", { productId: "Unknown product." });
+  if (!p) throw invalid("Unknown project.", { productId: "Unknown project." });
 }
 
 const editor = alias(user, "editor");

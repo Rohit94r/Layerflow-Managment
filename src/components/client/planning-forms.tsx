@@ -10,9 +10,9 @@ function ProductSelect({ products, defaultId }: { products: Option[]; defaultId?
   if (defaultId) return <input type="hidden" name="productId" value={defaultId} />;
   return (
     <div>
-      <label className="label" htmlFor="productId">Product</label>
+      <label className="label" htmlFor="productId">Project</label>
       <select id="productId" name="productId" className="input" defaultValue="">
-        <option value="">Portfolio-wide</option>
+        <option value="">All projects</option>
         {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
     </div>

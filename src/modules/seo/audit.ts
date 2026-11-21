@@ -53,7 +53,7 @@ function parseRobots(txt: string) {
     const [k, ...rest] = line.split(":");
     const key = k?.trim().toLowerCase();
     const val = rest.join(":").trim();
-    if (key === "user-agent") applies = val === "*" || val.toLowerCase().includes("layerflow");
+    if (key === "user-agent") applies = val === "*" || val.toLowerCase().includes("flotilla");
     else if (key === "disallow" && applies && val) disallow.push(val);
     else if (key === "sitemap" && val) sitemaps.push(val);
   }

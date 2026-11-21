@@ -14,10 +14,10 @@ export const ROLE_LABELS: Record<Role, string> = {
 export const ROLE_DESCRIPTIONS: Record<Role, string> = {
   owner: "Full control, including deleting the workspace.",
   admin: "Manage members, settings and every module.",
-  manager: "Manage products, work, docs and finance.",
-  member: "Create and edit products, tasks and docs.",
+  manager: "Manage projects, work, docs and finance.",
+  member: "Create and edit projects, tasks and docs.",
   viewer: "Read everything except finance.",
-  guest: "Read products and work only.",
+  guest: "Read projects and work only.",
   billing: "View and manage finance only.",
 };
 

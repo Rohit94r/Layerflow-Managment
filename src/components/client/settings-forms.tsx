@@ -43,7 +43,7 @@ export function WorkspaceSettingsForm({ slug, ws, canEdit }: { slug: string; ws:
   );
 }
 
-type Member = { id: string; userId: string; name: string; email: string; role: Role; joinedAt: Date };
+type Member = { id: string; userId: string; name: string; email: string; role: Role; joinedAt: Date; isAdmin: boolean };
 
 export function MembersTable({ slug, members, me, myRole, canManage }: { slug: string; members: Member[]; me: string; myRole: Role; canManage: boolean }) {
   const roleOpts = ROLES.filter((r) => r !== "owner" || myRole === "owner").map((r) => ({ value: r, label: ROLE_LABELS[r] }));
@@ -61,7 +61,8 @@ export function MembersTable({ slug, members, me, myRole, canManage }: { slug: s
         <tbody>
           {members.map((m) => {
             const self = m.userId === me;
-            const editable = canManage && !self && (m.role !== "owner" || myRole === "owner");
+            // The administrator always keeps owner access, so its row has no role or remove controls.
+            const editable = canManage && !self && !m.isAdmin && (m.role !== "owner" || myRole === "owner");
             return (
               <tr key={m.id}>
                 <td>
@@ -77,12 +78,12 @@ export function MembersTable({ slug, members, me, myRole, canManage }: { slug: s
                   {editable ? (
                     <InlineSelect label={`Role for ${m.name}`} value={m.role} options={roleOpts} onSave={(v) => changeRoleAction(slug, m.id, v as Role)} />
                   ) : (
-                    <span className="text-[13px]">{ROLE_LABELS[m.role]}</span>
+                    <span className="text-[13px]">{ROLE_LABELS[m.role]}{m.isAdmin && <span className="text-muted"> · Administrator</span>}</span>
                   )}
                 </td>
                 <td className="text-[13px] text-muted">{formatDate(m.joinedAt)}</td>
                 <td className="text-right">
-                  {(editable || self) && (
+                  {(editable || (self && !m.isAdmin)) && (
                     <ConfirmButton
                       onConfirm={() => removeMemberAction(slug, m.id, self)}
                       className="btn btn-ghost btn-sm text-bad"
@@ -140,8 +141,8 @@ export function InviteForm({ slug, invitations }: { slug: string; invitations: {
           <div className="eyebrow mb-2">Pending invitations</div>
           <ul className="divide-y divide-line rounded-md border border-line">
             {invitations.map((i) => (
-              <li key={i.id} className="flex items-center gap-3 px-3 py-2 text-[13px]">
-                <span className="flex-1">{i.email}</span>
+              <li key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-[13px]">
+                <span className="min-w-0 flex-1 truncate">{i.email}</span>
                 <span className="text-muted">{ROLE_LABELS[i.role]}</span>
                 <span className="text-muted">expires {formatDate(i.expiresAt)}</span>
                 <ConfirmButton onConfirm={() => revokeInviteAction(slug, i.id)} className="btn btn-ghost btn-sm text-bad" confirmLabel="Revoke?">Revoke</ConfirmButton>

@@ -40,7 +40,7 @@ export async function createAutomation(ctx: Ctx, raw: z.input<typeof input>) {
   if (!t) throw invalid("Unknown template.");
   if (i.productId) {
     const [p] = await db.select({ id: product.id }).from(product).where(and(eq(product.id, i.productId), eq(product.workspaceId, ctx.workspaceId)));
-    if (!p) throw invalid("Unknown product.");
+    if (!p) throw invalid("Unknown project.");
   }
   // Only declared params are stored, coerced to their declared type.
   const params = Object.fromEntries(t.params.map((p) => {
@@ -185,4 +185,15 @@ export async function runScheduledAutomations() {
     ran++;
   }
   return ran;
+}
+
+/**
+ * Event entry: runs one workspace's active automations of a template right after new data arrives
+ * (for example deploy-failure alerts after a Vercel sync). Dedupe keys keep it from acting twice.
+ */
+export async function runTemplateAutomations(workspaceId: string, templateKey: string) {
+  const rows = await db.select({ a: automation }).from(automation).innerJoin(workspace, eq(workspace.id, automation.workspaceId))
+    .where(and(eq(automation.workspaceId, workspaceId), eq(automation.template, templateKey), eq(automation.status, "active"), eq(workspace.automationsPaused, false)));
+  for (const { a } of rows) await executeAutomation(a, "schedule");
+  return rows.length;
 }

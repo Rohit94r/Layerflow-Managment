@@ -69,9 +69,9 @@ export function NewTaskButton({
                 </select>
               </div>
               <div>
-                <label className="label" htmlFor="productId">Product</label>
+                <label className="label" htmlFor="productId">Project</label>
                 <select id="productId" name="productId" className="input" defaultValue={defaultProductId ?? ""}>
-                  <option value="">No product</option>
+                  <option value="">No project</option>
                   {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
@@ -251,7 +251,7 @@ function TaskList({ slug, tasks, people, canEdit, showProduct }: { slug: string;
           <tr>
             <th className="w-16">#</th>
             <th>Title</th>
-            {showProduct && <th>Product</th>}
+            {showProduct && <th>Project</th>}
             <th>Status</th>
             <th>Priority</th>
             <th>Assignee</th>

@@ -45,7 +45,7 @@ export default async function AutomationsPage({ params }: PageProps<"/w/[workspa
                         <span className="font-medium">{a.name}</span>
                         <Badge tone={a.status === "active" ? "good" : "outline"}>{a.status}</Badge>
                         {a.requiresApproval && <Badge tone="cobalt">approval required</Badge>}
-                        <span className="text-[12px] text-muted">{a.productName ?? "All products"} · v{a.version}</span>
+                        <span className="text-[12px] text-muted">{a.productName ?? "All projects"} · v{a.version}</span>
                       </div>
                       <div className="mt-0.5 text-[12.5px] text-muted">
                         {templates().find((t) => t.key === a.template)?.trigger}
@@ -87,7 +87,7 @@ export default async function AutomationsPage({ params }: PageProps<"/w/[workspa
 
         <div>
           <h2 className="mb-3 text-xl">Templates</h2>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {templates().map((t) => (
               <div key={t.key} className="panel flex flex-col p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -96,7 +96,8 @@ export default async function AutomationsPage({ params }: PageProps<"/w/[workspa
                 </div>
                 <p className="mt-1 text-[13px] text-ink-2">{t.description}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5 text-[11.5px]">
-                  <Badge tone="outline">{t.trigger}</Badge>
+                  {/* Trigger descriptions can be a full sentence: let them wrap on narrow screens. */}
+                  <Badge tone="outline" className="h-auto! py-0.5 whitespace-normal!">{t.trigger}</Badge>
                   <Badge tone="neutral">{t.actionLabel}</Badge>
                 </div>
               </div>

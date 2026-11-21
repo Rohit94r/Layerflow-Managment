@@ -79,13 +79,17 @@ export function AuthForm({ mode }: { mode: "sign-in" | "sign-up" }) {
         {pending && <Loader2 className="size-4 animate-spin" />}
         {mode === "sign-up" ? "Create account" : "Sign in"}
       </button>
-      <p className="text-center text-[13px] text-ink-2">
-        {mode === "sign-up" ? (
-          <>Already have an account? <Link className="link" href={`/sign-in${qs}`}>Sign in</Link></>
-        ) : (
-          <>New here? <Link className="link" href={`/sign-up${qs}`}>Create an account</Link></>
-        )}
-      </p>
+      {mode === "sign-up" ? (
+        <p className="text-center text-[13px] text-ink-2">
+          Already have an account? <Link className="link" href={`/sign-in${qs}`}>Sign in</Link>
+        </p>
+      ) : (
+        next.startsWith("/invite/") && (
+          <p className="text-center text-[13px] text-ink-2">
+            New here? <Link className="link" href={`/sign-up${qs}${prefill ? `&email=${encodeURIComponent(prefill)}` : ""}`}>Create an account</Link>
+          </p>
+        )
+      )}
     </form>
   );
 }

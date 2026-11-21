@@ -50,7 +50,7 @@ export default async function DocPage({ params, searchParams }: PageProps<"/w/[w
             </select>
           </div>
           <div>
-            <label className="label" htmlFor="productId">Product</label>
+            <label className="label" htmlFor="productId">Project</label>
             <select id="productId" name="productId" className="input" defaultValue={doc.productId ?? ""}>
               <option value="">Workspace-wide</option>
               {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}

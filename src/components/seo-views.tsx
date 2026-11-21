@@ -150,7 +150,7 @@ export async function TechnicalAudit({ ctx, productId, hasSite }: { ctx: Ctx; pr
   return (
     <Panel title="Technical audit" action={canRun ? <RunAuditButton slug={ctx.workspaceSlug} productId={productId} label={a ? "Re-run" : "Run audit"} /> : undefined}>
       {!hasSite ? (
-        <p className="px-4 py-5 text-[13px] text-muted">Add a Domain or App link on the Overview tab to audit this product&apos;s site.</p>
+        <p className="px-4 py-5 text-[13px] text-muted">Add a Domain or App link on the Overview tab to audit this project&apos;s site.</p>
       ) : !a ? (
         <p className="px-4 py-5 text-[13px] text-muted">No audit yet. The crawler checks up to 25 pages on the same domain, respects robots.txt and waits between requests.</p>
       ) : a.status === "failed" ? (
@@ -199,7 +199,7 @@ export async function UptimePanel({ ctx, productId, hasSite }: { ctx: Ctx; produ
     <Panel title="Uptime" action={can(ctx, "seo.run") && hasSite ? <RunUptimeButton slug={ctx.workspaceSlug} productId={productId} /> : undefined}>
       {!rows.length ? (
         <p className="px-4 py-5 text-[13px] text-muted">
-          {hasSite ? "No checks yet. Run one now; the scheduler checks every site link automatically when CRON_SECRET is configured." : "Add a Domain or App link to monitor this product."}
+          {hasSite ? "No checks yet. Run one now; the scheduler checks every site link automatically when CRON_SECRET is configured." : "Add a Domain or App link to monitor this project."}
         </p>
       ) : (
         <ul className="divide-y divide-line">
@@ -236,7 +236,7 @@ export function NoSearchConsole({ slug, canManage }: { slug: string; canManage: 
   return (
     <Panel title="Google Search Console">
       <EmptyState compact title="Not connected" action={canManage ? <Link href={`/w/${slug}/integrations`} className="btn btn-primary">Connect Search Console</Link> : undefined}>
-        Connect Search Console and map a property to this product to see clicks, impressions, CTR, position, top queries and pages, and evidence-backed opportunities.
+        Connect Search Console and map a property to this project to see clicks, impressions, CTR, position, top queries and pages, and evidence-backed opportunities.
       </EmptyState>
     </Panel>
   );

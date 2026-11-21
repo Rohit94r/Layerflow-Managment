@@ -27,7 +27,7 @@ const configInput = z.object({
 async function validateRefs(ctx: Ctx, productId: string | null, ownerId: string | null) {
   if (productId) {
     const [p] = await db.select({ id: product.id }).from(product).where(and(eq(product.id, productId), eq(product.workspaceId, ctx.workspaceId)));
-    if (!p) throw invalid("Unknown product.");
+    if (!p) throw invalid("Unknown project.");
   }
   if (ownerId) {
     const [m] = await db.select({ id: workspaceMember.id }).from(workspaceMember).where(and(eq(workspaceMember.workspaceId, ctx.workspaceId), eq(workspaceMember.userId, ownerId)));

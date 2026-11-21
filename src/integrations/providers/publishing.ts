@@ -5,8 +5,8 @@ import { safePostJson } from "../../server/safe-fetch";
  * Outbound publishing adapters.
  *
  * Webhook: POST JSON to the product's own site. Signed like Stripe/GitHub webhooks:
- *   X-LayerFlow-Timestamp: <unix seconds>
- *   X-LayerFlow-Signature: sha256=<hex HMAC-SHA256(secret, `${timestamp}.${rawBody}`)>
+ *   X-Flotilla-Timestamp: <unix seconds>
+ *   X-Flotilla-Signature: sha256=<hex HMAC-SHA256(secret, `${timestamp}.${rawBody}`)>
  * The receiver should reject timestamps older than 5 minutes and compare signatures in constant time.
  * A 2xx response counts as delivered; if the JSON response has { "url": "https://…" } it is stored as the live URL.
  *
@@ -36,7 +36,7 @@ export async function deliverWebhook(url: string, secret: string, event: "conten
   const raw = JSON.stringify({ event, sentAt: new Date().toISOString(), post });
   const ts = Math.floor(Date.now() / 1000);
   const res = await safePostJson(url, raw, {
-    headers: { "X-LayerFlow-Event": event, "X-LayerFlow-Timestamp": String(ts), "X-LayerFlow-Signature": signWebhook(secret, ts, raw), "X-LayerFlow-Delivery": `${post.id}:${ts}` },
+    headers: { "X-Flotilla-Event": event, "X-Flotilla-Timestamp": String(ts), "X-Flotilla-Signature": signWebhook(secret, ts, raw), "X-Flotilla-Delivery": `${post.id}:${ts}` },
   });
   let liveUrl: string | null = null;
   try {

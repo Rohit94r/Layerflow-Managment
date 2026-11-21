@@ -69,7 +69,7 @@ export async function deleteProductAction(slug: string, id: string) {
 export async function bulkUpdateAction(slug: string, ids: string[], patch: Record<string, string>) {
   const res = await withCtx(slug, async (ctx) => {
     const n = await svc.bulkUpdate(ctx, ids, patch);
-    return { ok: true, message: `Updated ${n} product${n === 1 ? "" : "s"}.` };
+    return { ok: true, message: `Updated ${n} project${n === 1 ? "" : "s"}.` };
   });
   refresh(slug);
   return res;

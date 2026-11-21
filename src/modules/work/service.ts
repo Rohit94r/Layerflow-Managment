@@ -35,7 +35,7 @@ export const taskPatch = taskInput.partial();
 async function assertRefs(ctx: Ctx, refs: { productId?: string | null; assigneeId?: string | null }) {
   if (refs.productId) {
     const [p] = await db.select({ id: product.id }).from(product).where(and(eq(product.id, refs.productId), eq(product.workspaceId, ctx.workspaceId)));
-    if (!p) throw invalid("Unknown product.", { productId: "Unknown product." });
+    if (!p) throw invalid("Unknown project.", { productId: "Unknown project." });
   }
   if (refs.assigneeId && !(await isMember(ctx.workspaceId, refs.assigneeId))) {
     throw invalid("Assignee must be a workspace member.", { assigneeId: "Not a member." });

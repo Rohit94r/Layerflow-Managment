@@ -26,7 +26,7 @@ export default async function ProductContent({ params }: PageProps<"/w/[workspac
             slug={ctx.workspaceSlug}
             posts={posts}
             showProduct={false}
-            empty={<EmptyState compact title="No posts for this product yet">Write one, or install the Content Writer agent scoped to {product.name} to get a draft every week.</EmptyState>}
+            empty={<EmptyState compact title="No posts for this project yet">Write one, or install the Content Writer agent scoped to {product.name} to get a draft every week.</EmptyState>}
           />
         </Panel>
         <ContentCalendar ctx={ctx} productId={product.id} />

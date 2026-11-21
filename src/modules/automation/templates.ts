@@ -12,6 +12,7 @@ import { budget } from "../planning/schema";
 import { analyticsDaily } from "../analytics/schema";
 import { contentPost } from "../content/schema";
 import { integrationResource } from "../integrations/schema";
+import { deployment } from "../deploys/schema";
 import { membersWithCapability } from "./inbox";
 
 /**
@@ -36,6 +37,7 @@ export type Template = {
 };
 
 const owners = (workspaceId: string) => membersWithCapability(workspaceId, "workspace.manage");
+const PROVIDER_NAMES: Record<string, string> = { google_search_console: "Search Console", google_analytics: "Google Analytics", vercel: "Vercel" };
 
 export const TEMPLATES: Template[] = [
   {
@@ -65,7 +67,7 @@ export const TEMPLATES: Template[] = [
     key: "overdue_escalation",
     name: "Overdue critical task escalation",
     trigger: "Daily · urgent/high task overdue by N days",
-    description: "Escalates overdue high-priority work to the assignee and the product owner.",
+    description: "Escalates overdue high-priority work to the assignee and the project owner.",
     actionLabel: "Inbox notification",
     params: [{ key: "graceDays", label: "Days overdue", type: "number", default: 1 }],
     canRequireApproval: false,
@@ -82,9 +84,9 @@ export const TEMPLATES: Template[] = [
   },
   {
     key: "review_due",
-    name: "Product review due",
-    trigger: "Daily · a product's next review date has arrived",
-    description: "Reminds the product owner to run the scheduled review.",
+    name: "Project review due",
+    trigger: "Daily · a project's next review date has arrived",
+    description: "Reminds the project owner to run the scheduled review.",
     actionLabel: "Inbox notification",
     params: [],
     canRequireApproval: false,
@@ -102,7 +104,7 @@ export const TEMPLATES: Template[] = [
     key: "uptime_incident",
     name: "Site down → urgent bug",
     trigger: "After each uptime check · latest check failed",
-    description: "Opens an urgent bug on the product when its site fails an uptime check (once per URL per day).",
+    description: "Opens an urgent bug on the project when its site fails an uptime check (once per URL per day).",
     actionLabel: "Create task",
     params: [],
     canRequireApproval: true,
@@ -115,6 +117,37 @@ export const TEMPLATES: Template[] = [
         kind: "task.create" as const, dedupeKey: `${r.productId}:${r.url}:${today()}`, target: r.url,
         payload: { title: `Site down: ${r.url.replace(/^https?:\/\//, "")}`, type: "bug", priority: "urgent", productId: r.productId,
           description: `Uptime check failed at ${r.checkedAt.toISOString()}: ${r.error ?? `HTTP ${r.statusCode}`}.\n\nCreated by the “Site down → urgent bug” automation.` },
+      }));
+    },
+  },
+  {
+    key: "deploy_failed",
+    name: "Production deploy failed → alert",
+    trigger: "After each Vercel sync · a project's latest production deployment failed",
+    description: "Alerts the project owner when the newest production deployment on Vercel fails, with the branch, commit and build-log link. The previous deployment keeps serving until a fix ships.",
+    actionLabel: "Inbox notification",
+    params: [],
+    canRequireApproval: false,
+    async evaluate(ws, slug, _p, productId) {
+      const rows = await db.select({ d: deployment, project: integrationResource.name, productName: product.name, productSlug: product.slug, ownerId: product.ownerId })
+        .from(deployment)
+        .innerJoin(integrationResource, eq(integrationResource.id, deployment.resourceId))
+        .innerJoin(product, eq(product.id, integrationResource.productId))
+        .where(and(eq(deployment.workspaceId, ws), eq(deployment.target, "production"), ...(productId ? [eq(integrationResource.productId, productId)] : [])))
+        .orderBy(desc(deployment.createdAt));
+      const latest = new Map<string, (typeof rows)[number]>();
+      for (const r of rows) if (!latest.has(r.d.resourceId)) latest.set(r.d.resourceId, r);
+      const fallback = await owners(ws);
+      return [...latest.values()].filter((r) => r.d.state === "error").map((r) => ({
+        kind: "notify" as const, dedupeKey: r.d.externalId, target: r.project, recipients: r.ownerId ? [r.ownerId] : fallback, severity: "critical" as const,
+        title: `${r.productName}: production deploy failed`,
+        body: [
+          `Vercel project ${r.project}${r.d.branch ? ` · branch ${r.d.branch}` : ""}${r.d.commitMessage ? ` · “${r.d.commitMessage}”` : ""}${r.d.author ? ` by ${r.d.author}` : ""}.`,
+          r.d.errorMessage ? `Error: ${r.d.errorMessage}` : "",
+          r.d.inspectorUrl ? `Build logs: ${r.d.inspectorUrl}` : "",
+          "The previous production deployment keeps serving until a new one succeeds.",
+        ].filter(Boolean).join(" "),
+        href: `/w/${slug}/products/${r.productSlug}`,
       }));
     },
   },
@@ -152,7 +185,7 @@ export const TEMPLATES: Template[] = [
       const fallback = await owners(ws);
       return rows.map((c) => ({
         kind: "notify" as const, dedupeKey: `${c.id}:${today()}`, target: c.accountLabel, recipients: c.connectedBy ? [c.connectedBy] : fallback,
-        severity: "critical" as const, title: `${c.provider === "google_search_console" ? "Search Console" : c.provider === "google_analytics" ? "Google Analytics" : c.provider} ${c.status === "needs_reauth" ? "needs reconnecting" : "sync is failing"}`,
+        severity: "critical" as const, title: `${PROVIDER_NAMES[c.provider] ?? c.provider} ${c.status === "needs_reauth" ? "needs reconnecting" : "sync is failing"}`,
         body: c.lastError ?? "", href: `/w/${slug}/integrations`,
       }));
     },
@@ -161,7 +194,7 @@ export const TEMPLATES: Template[] = [
     key: "budget_threshold",
     name: "Budget threshold",
     trigger: "Daily · monthly run-rate reaches N% of a budget",
-    description: "Warns finance managers when recurring costs approach a product or workspace budget (same currency only).",
+    description: "Warns finance managers when recurring costs approach a project or workspace budget (same currency only).",
     actionLabel: "Inbox notification",
     params: [{ key: "percent", label: "Threshold %", type: "number", default: 90 }],
     canRequireApproval: false,
@@ -189,7 +222,7 @@ export const TEMPLATES: Template[] = [
     key: "traffic_drop",
     name: "Traffic drop alert",
     trigger: "Daily · GA4 sessions in the last 7 days fell N% vs the 7 days before",
-    description: "Alerts the product owner when Google Analytics sessions drop sharply, with the numbers. Ignores low-volume properties to avoid noise.",
+    description: "Alerts the project owner when Google Analytics sessions drop sharply, with the numbers. Ignores low-volume properties to avoid noise.",
     actionLabel: "Inbox notification",
     params: [
       { key: "percent", label: "Drop threshold %", type: "number", default: 30 },
@@ -270,7 +303,7 @@ export const TEMPLATES: Template[] = [
         `## Overdue (${overdue.length})`, list(overdue.slice(0, 20).map((x) => `#${x.number} ${x.title} — due ${x.dueDate}`), "Nothing overdue."),
         `## Renewals in the next 14 days (${renewals.length})`, list(renewals.map((e) => `${e.vendor} — ${money(e.amountMinor, e.currency)} on ${e.nextRenewalDate}`), "None."),
         `## Open SEO opportunities (${insights.length})`, list(insights.slice(0, 10).map((i) => i.title), "None, or Search Console not connected."),
-        `## Portfolio`, list(products.filter((p) => !p.archivedAt).map((p) => `${p.name}: ${p.lifecycle}, health ${p.health}, ${p.priority.toUpperCase()}`), "No products."),
+        `## Portfolio`, list(products.filter((p) => !p.archivedAt).map((p) => `${p.name}: ${p.lifecycle}, health ${p.health}, ${p.priority.toUpperCase()}`), "No projects."),
         `## Missing inputs`, "Revenue and analytics appear here only when recorded or connected; absent data is not treated as zero.",
       ].join("\n\n");
       const members = await membersWithCapability(ws, "docs.view");

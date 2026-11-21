@@ -2,13 +2,14 @@ import Link from "next/link";
 import { CheckCircle2, Plug } from "lucide-react";
 import { getWorkspaceCtx } from "@/server/context";
 import { can } from "@/server/permissions";
-import { catalog, listConnections, providerLabel } from "@/modules/integrations/service";
+import { catalog, listConnections, providerLabel, resourceNoun } from "@/modules/integrations/service";
 import { productOptions } from "@/modules/portfolio/service";
-import { ConnectionActions, ResourceMapper } from "@/components/client/integration-panels";
+import { ConnectionActions, ResourceMapper, VercelConnect, VercelWebhook } from "@/components/client/integration-panels";
 import { FreshnessBadge, connectionState } from "@/components/freshness";
 import { Badge, NoAccess, PageHeader, Panel } from "@/components/ui";
 import { formatDate, relativeTime } from "@/lib/format";
 import { redirectUri } from "@/integrations/providers/google-oauth";
+import { publicOrigin } from "@/lib/origin";
 
 export const metadata = { title: "Integrations" };
 
@@ -30,7 +31,7 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
       )}
       {sp.connected === "1" && (
         <p className="mb-5 flex items-center gap-2 rounded-md border border-good/40 bg-good-soft px-4 py-2.5 text-[13.5px] text-good">
-          <CheckCircle2 className="size-4" /> Connected. Map each property to a product below; only mapped properties are synced.
+          <CheckCircle2 className="size-4" /> Connected. Map each property to a project below; only mapped properties are synced.
         </p>
       )}
 
@@ -38,24 +39,27 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
         <div className="mb-8 space-y-5">
           {connections.map((c) => {
             const state = connectionState(c.status, c.lastSuccessAt, c.lastSyncAt);
+            const isVercel = c.provider === "vercel";
+            const [one, many] = resourceNoun(c.provider);
             return (
               <Panel
                 key={c.id}
-                title={<span className="flex flex-wrap items-center gap-x-2">{providerLabel(c.provider)} <span className="font-sans text-[13px] text-muted">· {c.accountLabel || "Google account"}</span></span>}
+                title={<span className="flex flex-wrap items-center gap-x-2">{providerLabel(c.provider)} <span className="font-sans text-[13px] text-muted">· {c.accountLabel || (isVercel ? "Vercel account" : "Google account")}</span></span>}
                 action={<FreshnessBadge state={state} at={c.lastSuccessAt} />}
               >
                 <div className="space-y-4 p-4">
                   {c.lastError && state !== "fresh" && (
                     <p className="rounded-md border border-bad/40 bg-bad-soft px-3 py-2 text-[13px] text-bad">
                       Last error: {c.lastError}
-                      {c.status === "needs_reauth" && canManage && (
+                      {c.status === "needs_reauth" && canManage && !isVercel && (
                         <> — <a className="underline" href={`/api/integrations/${c.provider}/start?workspace=${ctx.workspaceSlug}`}>Reconnect</a></>
                       )}
                     </p>
                   )}
+                  {c.status === "needs_reauth" && canManage && isVercel && <VercelConnect slug={ctx.workspaceSlug} label="Paste a new token" className="btn btn-secondary btn-sm" />}
                   <dl className="grid gap-x-6 gap-y-1 text-[13px] sm:grid-cols-[140px_1fr]">
-                    <dt className="text-muted">Scopes granted</dt>
-                    <dd className="font-mono text-[12px]">{c.scopes.map((s) => s.replace("https://www.googleapis.com/auth/", "")).join(", ")}</dd>
+                    <dt className="text-muted">{isVercel ? "Access" : "Scopes granted"}</dt>
+                    <dd className={isVercel ? "" : "font-mono text-[12px]"}>{isVercel ? "Access token, used for read requests only" : c.scopes.map((s) => s.replace("https://www.googleapis.com/auth/", "")).join(", ")}</dd>
                     <dt className="text-muted">Connected</dt>
                     <dd>{formatDate(c.createdAt)}</dd>
                     <dt className="text-muted">Last successful sync</dt>
@@ -63,15 +67,18 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
                   </dl>
 
                   <div>
-                    <div className="eyebrow mb-2">Properties</div>
+                    <div className="eyebrow mb-2 capitalize">{many}</div>
                     {c.resources.length ? (
                       <div className="overflow-x-auto rounded-md border border-line">
                         <table className="table min-w-[560px]">
-                          <thead><tr><th>Property</th><th>Product</th><th>Data through</th><th>Last sync</th></tr></thead>
+                          <thead><tr><th className="capitalize">{one}</th><th>Project</th><th>{isVercel ? "Latest deploy" : "Data through"}</th><th>Last sync</th></tr></thead>
                           <tbody>
                             {c.resources.map((r) => (
                               <tr key={r.id}>
-                                <td className="text-[12.5px]"><span className={c.provider === "google_analytics" ? "" : "font-mono"}>{c.provider === "google_analytics" ? r.name : r.externalId}</span></td>
+                                <td className="text-[12.5px]">
+                                  <span className={c.provider === "google_search_console" ? "font-mono" : ""}>{c.provider === "google_search_console" ? r.externalId : r.name}</span>
+                                  {isVercel && typeof r.metadata?.productionDomain === "string" && <span className="block text-[11.5px] text-muted">{r.metadata.productionDomain}</span>}
+                                </td>
                                 <td><ResourceMapper slug={ctx.workspaceSlug} resourceId={r.id} productId={r.productId} products={products} canManage={canManage} /></td>
                                 <td className="text-[13px]">{r.dataThrough ? formatDate(r.dataThrough) : <span className="text-muted">—</span>}</td>
                                 <td className="text-[13px] text-muted">{r.lastSyncAt ? relativeTime(r.lastSyncAt) : "Never"}</td>
@@ -81,7 +88,13 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
                         </table>
                       </div>
                     ) : (
-                      <p className="text-[13px] text-muted">{c.provider === "google_analytics" ? "No GA4 properties found for this Google account. Check you have at least Viewer access in Google Analytics, then rediscover." : "No verified properties found for this Google account. Verify your site in Search Console, then rediscover."}</p>
+                      <p className="text-[13px] text-muted">
+                        {isVercel
+                          ? "No projects found. Check the token's scope includes the team that owns your projects, then rediscover (or paste a token with the right scope)."
+                          : c.provider === "google_analytics"
+                            ? "No GA4 properties found for this Google account. Check you have at least Viewer access in Google Analytics, then rediscover."
+                            : "No verified properties found for this Google account. Verify your site in Search Console, then rediscover."}
+                      </p>
                     )}
                   </div>
 
@@ -101,7 +114,16 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
                       </ul>
                     </details>
                   )}
-                  <ConnectionActions slug={ctx.workspaceSlug} connectionId={c.id} canManage={canManage} />
+                  {isVercel && canManage && (
+                    <VercelWebhook
+                      slug={ctx.workspaceSlug}
+                      connectionId={c.id}
+                      url={`${publicOrigin()}/api/integrations/vercel/webhook?connection=${c.id}`}
+                      configured={c.hasWebhook}
+                      lastAt={c.webhookLastAt ? relativeTime(c.webhookLastAt) : null}
+                    />
+                  )}
+                  <ConnectionActions slug={ctx.workspaceSlug} connectionId={c.id} canManage={canManage} noun={many} tokenBased={isVercel} />
                 </div>
               </Panel>
             );
@@ -110,7 +132,7 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
       )}
 
       <h2 className="mb-3 text-xl">Catalog</h2>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {cat.map((e) => (
           <div key={e.id} className="panel flex flex-col p-4">
             <div className="flex items-start justify-between gap-3">
@@ -132,7 +154,10 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
               </div>
             )}
             <div className="mt-4">
-              {e.state === "available" && e.configured && canManage && (
+              {e.id === "vercel" && canManage && (
+                <VercelConnect slug={ctx.workspaceSlug} label={connections.some((c) => c.provider === e.id) ? "Connect another account" : "Connect"} />
+              )}
+              {e.id !== "vercel" && e.state === "available" && e.configured && canManage && (
                 <a href={`/api/integrations/${e.id}/start?workspace=${ctx.workspaceSlug}`} className="btn btn-primary">
                   <Plug className="size-4" /> {connections.some((c) => c.provider === e.id) ? "Connect another account" : "Connect"}
                 </a>
@@ -148,7 +173,7 @@ export default async function IntegrationsPage({ params, searchParams }: PagePro
         ))}
       </div>
       <p className="mt-4 text-[12px] text-muted">
-        Planned connectors are listed for transparency; they are not available yet. See <Link className="link" href={`/w/${ctx.workspaceSlug}/seo`}>SEO</Link> for Search Console data and <Link className="link" href={`/w/${ctx.workspaceSlug}/growth`}>Growth</Link> for Analytics.
+        Planned connectors are listed for transparency; they are not available yet. See <Link className="link" href={`/w/${ctx.workspaceSlug}/seo`}>SEO</Link> for Search Console data, <Link className="link" href={`/w/${ctx.workspaceSlug}/growth`}>Growth</Link> for Analytics, and each project&apos;s Overview for its Vercel deployments.
       </p>
     </>
   );

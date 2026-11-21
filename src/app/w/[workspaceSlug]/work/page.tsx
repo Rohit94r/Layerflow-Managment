@@ -21,7 +21,7 @@ export default async function WorkPage({ params, searchParams }: PageProps<"/w/[
     <>
       <PageHeader
         title="Work"
-        description="Tasks and bugs across every product."
+        description="Tasks and bugs across every project."
         actions={can(ctx, "work.edit") && <NewTaskButton slug={ctx.workspaceSlug} products={products} people={people} autoOpen={sp.new === "1"} />}
       />
       <FilterBar

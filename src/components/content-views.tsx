@@ -45,7 +45,7 @@ export function PostList({ slug, posts, showProduct = true, empty }: { slug: str
           <thead>
             <tr>
               <th>Title</th>
-              {showProduct && <th>Product</th>}
+              {showProduct && <th>Project</th>}
               <th>Status</th>
               <th>Keyword</th>
               <th className="text-right">SEO</th>

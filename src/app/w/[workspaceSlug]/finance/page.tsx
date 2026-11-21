@@ -11,7 +11,7 @@ export default async function FinancePage({ params }: PageProps<"/w/[workspaceSl
   if (!can(ctx, "finance.view")) return <NoAccess what="finance" />;
   return (
     <>
-      <PageHeader title="Finance" description="What each product costs, what renews next, and what it earns." />
+      <PageHeader title="Finance" description="What each project costs, what renews next, and what it earns." />
       <FinanceView ctx={ctx} currency={ctx.workspace.currency} />
     </>
   );

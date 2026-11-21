@@ -22,6 +22,13 @@
       "when": 1795109286185,
       "tag": "0002_growth",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795273383607,
+      "tag": "0003_vercel",
+      "breakpoints": true
     }
   ]
 }

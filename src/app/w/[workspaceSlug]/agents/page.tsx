@@ -41,7 +41,7 @@ export default async function AgentsPage({ params }: PageProps<"/w/[workspaceSlu
         </Panel>
         <div>
           <h2 className="mb-3 text-xl">Catalog</h2>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {catalog().map((a) => (
               <div key={a.key} className="panel flex flex-col p-4">
                 <div className="flex items-start justify-between gap-3">

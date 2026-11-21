@@ -19,6 +19,9 @@ export const integrationConnection = pgTable(
     accessTokenEnc: text("access_token_enc"),
     refreshTokenEnc: text("refresh_token_enc"),
     tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+    /** Signing secret of a provider webhook pointed at this connection (Vercel), encrypted. */
+    webhookSecretEnc: text("webhook_secret_enc"),
+    webhookLastAt: timestamp("webhook_last_at", { withTimezone: true }),
     connectedBy: text("connected_by").references(() => user.id, { onDelete: "set null" }),
     lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
     lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
@@ -59,7 +62,7 @@ export const syncRun = pgTable(
     workspaceId: text("workspace_id").notNull().references(() => workspace.id, { onDelete: "cascade" }),
     connectionId: text("connection_id").notNull().references(() => integrationConnection.id, { onDelete: "cascade" }),
     resourceId: text("resource_id").references(() => integrationResource.id, { onDelete: "cascade" }),
-    trigger: text("trigger").$type<"manual" | "schedule" | "connect">().notNull(),
+    trigger: text("trigger").$type<"manual" | "schedule" | "connect" | "webhook" | "refresh">().notNull(),
     status: text("status").$type<SyncStatus>().notNull().default("running"),
     recordsWritten: integer("records_written").notNull().default(0),
     periodStart: text("period_start"),

@@ -55,7 +55,7 @@ export async function safeGet(raw: string, opts: { timeoutMs?: number; maxBytes?
       const res = await fetch(url, {
         redirect: "manual",
         signal: ctrl.signal,
-        headers: { "User-Agent": "LayerFlowOS-Auditor/1.0 (+site audit requested by the site owner)", Accept: "text/html,application/xhtml+xml,*/*;q=0.8" },
+        headers: { "User-Agent": "Flotilla-Auditor/1.0 (+site audit requested by the site owner)", Accept: "text/html,application/xhtml+xml,*/*;q=0.8" },
       });
       if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
         current = new URL(res.headers.get("location")!, url).toString();
@@ -121,7 +121,7 @@ export async function safePostJson(raw: string, body: unknown, opts: { headers?:
       method: "POST",
       redirect: "manual",
       signal: ctrl.signal,
-      headers: { "Content-Type": "application/json", "User-Agent": "LayerFlowOS-Publisher/1.0", ...opts.headers },
+      headers: { "Content-Type": "application/json", "User-Agent": "Flotilla-Publisher/1.0", ...opts.headers },
       body: typeof body === "string" ? body : JSON.stringify(body),
     });
     const text = await readCapped(res, opts.maxBytes ?? 200_000);

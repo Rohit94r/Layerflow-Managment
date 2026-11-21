@@ -58,11 +58,11 @@ export function ChannelSettings({ slug, productId, v, hostedUrl, canEdit, canAut
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="label" htmlFor="blogTitle">Blog title</label>
-              <input id="blogTitle" name="blogTitle" defaultValue={v.blogTitle} maxLength={120} className="input" placeholder="Defaults to “<Product> blog”" />
+              <input id="blogTitle" name="blogTitle" defaultValue={v.blogTitle} maxLength={120} className="input" placeholder="Defaults to “<Project> blog”" />
             </div>
             <div>
               <label className="label" htmlFor="blogDescription">Blog description</label>
-              <input id="blogDescription" name="blogDescription" defaultValue={v.blogDescription} maxLength={300} className="input" placeholder="Defaults to the product summary" />
+              <input id="blogDescription" name="blogDescription" defaultValue={v.blogDescription} maxLength={300} className="input" placeholder="Defaults to the project summary" />
             </div>
           </div>
         </fieldset>
@@ -72,7 +72,7 @@ export function ChannelSettings({ slug, productId, v, hostedUrl, canEdit, canAut
           <input type="hidden" name="blogDescription" value={v.blogDescription} />
           <div>
             <label className="label" htmlFor="webhookUrl">Webhook URL</label>
-            <input id="webhookUrl" name="webhookUrl" type="url" defaultValue={v.webhookUrl ?? ""} required className="input" placeholder="https://your-site.com/api/layerflow/publish" />
+            <input id="webhookUrl" name="webhookUrl" type="url" defaultValue={v.webhookUrl ?? ""} required className="input" placeholder="https://your-site.com/api/flotilla/publish" />
             <p className="hint">Must be public https. We POST <code className="font-mono">{"{ event, post }"}</code> as JSON and only mark the post published when you answer 2xx. Reply with <code className="font-mono">{"{ \"url\": \"https://…\" }"}</code> to record the live URL.</p>
           </div>
           <div>
@@ -85,7 +85,7 @@ export function ChannelSettings({ slug, productId, v, hostedUrl, canEdit, canAut
               <div className="label">Signing secret</div>
               <CopyField value={v.webhookSecret} />
               <p className="hint">
-                Verify <code className="font-mono">X-LayerFlow-Signature</code> = <code className="font-mono">sha256=HMAC_SHA256(secret, timestamp + &quot;.&quot; + rawBody)</code> using <code className="font-mono">X-LayerFlow-Timestamp</code>; reject requests older than 5 minutes.
+                Verify <code className="font-mono">X-Flotilla-Signature</code> = <code className="font-mono">sha256=HMAC_SHA256(secret, timestamp + &quot;.&quot; + rawBody)</code> using <code className="font-mono">X-Flotilla-Timestamp</code>; reject requests older than 5 minutes.
               </p>
               {canEdit && (
                 <div className="mt-2">
@@ -119,7 +119,7 @@ export function ChannelSettings({ slug, productId, v, hostedUrl, canEdit, canAut
           <div className="flex items-start gap-2 rounded-md border border-warn/40 bg-warn-soft/60 p-3 text-[12.5px] text-warn">
             <ShieldAlert className="mt-0.5 size-4 shrink-0" />
             <div className="flex-1">
-              Agents will publish public content under this product&apos;s name without asking. Keep the weekly limit low and check the delivery log.
+              Agents will publish public content under this project&apos;s name without asking. Keep the weekly limit low and check the delivery log.
               <div className="mt-2 flex items-center gap-2 text-ink">
                 <label htmlFor="weeklyAgentLimit" className="text-[12.5px]">Max agent posts per 7 days</label>
                 <input id="weeklyAgentLimit" name="weeklyAgentLimit" type="number" min={0} max={50} defaultValue={v.weeklyAgentLimit} className="input w-20" />

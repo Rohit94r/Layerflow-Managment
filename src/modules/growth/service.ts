@@ -147,7 +147,7 @@ export async function nextActions(ctx: Ctx, pulse?: PulseRow[]): Promise<NextAct
       }
     }
     if (r.product.health === "critical" || r.product.health === "at_risk") {
-      out.push({ id: `health:${r.product.id}`, severity: r.product.health === "critical" ? "critical" : "high", category: "product", title: `${r.product.name} is ${r.product.health.replace("_", " ")}`, detail: r.topSignal ?? "Review the product's health reason and set a recovery task.", href: `${base}/products/${r.product.slug}`, cta: "Open", product: prod });
+      out.push({ id: `health:${r.product.id}`, severity: r.product.health === "critical" ? "critical" : "high", category: "product", title: `${r.product.name} is ${r.product.health.replace("_", " ")}`, detail: r.topSignal ?? "Review the project's health reason and set a recovery task.", href: `${base}/products/${r.product.slug}`, cta: "Open", product: prod });
     }
   }
   return out.sort((a, b) => RANK[a.severity] - RANK[b.severity]).slice(0, 12);

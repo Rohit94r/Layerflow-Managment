@@ -33,7 +33,7 @@ export async function RoadmapView({ ctx, productId }: { ctx: Ctx; productId?: st
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{g.title}</span>
                     <Badge tone={GOAL_TONE[g.status]}>{g.status.replace("_", " ")}</Badge>
-                    {!productId && <span className="text-[12px] text-muted">{g.productName ?? "Portfolio"}</span>}
+                    {!productId && <span className="text-[12px] text-muted">{g.productName ?? "All projects"}</span>}
                   </div>
                   <div className="mt-1.5 flex items-center gap-3">
                     <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-sunken" role="progressbar" aria-valuenow={Math.round(g.progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label={`${g.title} progress`}>

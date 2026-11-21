@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn, initials } from "@/lib/format";
+import { APP_NAME } from "@/lib/brand";
 import { label } from "@/modules/portfolio/constants";
 
 export function Logo({ className, withName = true }: { className?: string; withName?: boolean }) {
@@ -10,7 +11,7 @@ export function Logo({ className, withName = true }: { className?: string; withN
         <path d="M4 15.5 16 22 28 15.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
         <path d="M4 21 16 27.5 28 21" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
       </svg>
-      {withName && <span className="font-serif text-[1.3rem] leading-none tracking-tight">LayerFlow</span>}
+      {withName && <span className="text-[1.2rem] font-semibold leading-none tracking-tight">{APP_NAME}</span>}
     </span>
   );
 }
@@ -139,7 +140,8 @@ export function Avatar({ name, className }: { name: string | null | undefined; c
 export function ProductMark({ name, color, className }: { name: string; color: string; className?: string }) {
   return (
     <span
-      className={cn("inline-grid size-7 shrink-0 place-items-center rounded-md font-serif text-[13px] text-white", className)}
+      // The outline keeps dark project colours visible on the dark theme.
+      className={cn("inline-grid size-7 shrink-0 place-items-center rounded-md font-serif text-[13px] font-semibold text-white ring-1 ring-inset ring-white/15", className)}
       style={{ background: color }}
       aria-hidden
     >

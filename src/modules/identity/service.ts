@@ -1,17 +1,80 @@
 import { createHash } from "node:crypto";
 import { and, asc, count, eq, gt, sql } from "drizzle-orm";
+import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { z } from "zod";
 import { db } from "../../server/db";
+import { ADMIN, isAdminEmail } from "../../server/auth/admin";
 import { assertCan, type Ctx } from "../../server/permissions";
 import { conflict, forbidden, invalid, notFound } from "../../lib/errors";
 import { slugify } from "../../lib/format";
-import { newToken } from "../../lib/id";
+import { newId, newToken } from "../../lib/id";
 import { recordAudit } from "../audit/service";
 import { INVITABLE_ROLES, RESERVED_SLUGS, ROLES, type Role } from "./constants";
-import { invitation, user, workspace, workspaceMember } from "./schema";
+import { account, invitation, user, workspace, workspaceMember } from "./schema";
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 const INVITE_TTL_DAYS = 7;
+
+/* ---------------- Administrator ---------------- */
+
+async function adminUserId(): Promise<string | null> {
+  const [row] = await db.select({ id: user.id }).from(user).where(sql`lower(${user.email}) = ${ADMIN.email}`).limit(1);
+  return row?.id ?? null;
+}
+
+/**
+ * Makes the built-in administrator usable: creates the account if missing, resets its password to the configured
+ * one if it differs, and makes it an owner of every workspace. Idempotent; runs on every server start.
+ */
+export async function ensureAdminAccount() {
+  let id = await adminUserId();
+  if (!id) {
+    await db.insert(user).values({ id: newId(), name: ADMIN.name, email: ADMIN.email, emailVerified: true }).onConflictDoNothing();
+    id = (await adminUserId())!;
+  }
+
+  // Better Auth stores the email/password credential as an account row with providerId "credential" and accountId = user id.
+  const [cred] = await db
+    .select({ id: account.id, password: account.password })
+    .from(account)
+    .where(and(eq(account.userId, id), eq(account.providerId, "credential")))
+    .limit(1);
+  if (!cred) {
+    await db
+      .insert(account)
+      .values({ id: `credential-${id}`, accountId: id, providerId: "credential", userId: id, password: await hashPassword(ADMIN.password) })
+      .onConflictDoNothing();
+  } else if (!cred.password || !(await verifyPassword({ hash: cred.password, password: ADMIN.password }))) {
+    await db.update(account).set({ password: await hashPassword(ADMIN.password), updatedAt: new Date() }).where(eq(account.id, cred.id));
+  }
+
+  const missing = await db
+    .select({ id: workspace.id })
+    .from(workspace)
+    .leftJoin(workspaceMember, and(eq(workspaceMember.workspaceId, workspace.id), eq(workspaceMember.userId, id)))
+    .where(sql`${workspaceMember.role} is distinct from 'owner'`);
+  if (missing.length) {
+    await db
+      .insert(workspaceMember)
+      .values(missing.map((w) => ({ workspaceId: w.id, userId: id, role: "owner" as const })))
+      .onConflictDoUpdate({ target: [workspaceMember.workspaceId, workspaceMember.userId], set: { role: "owner" } });
+  }
+  return id;
+}
+
+/**
+ * Sign-up is closed to the public: only the administrator and people holding a pending, unexpired invitation
+ * may create an account.
+ */
+export async function canSignUp(email: string) {
+  if (isAdminEmail(email)) return true;
+  const [inv] = await db
+    .select({ id: invitation.id })
+    .from(invitation)
+    .where(and(sql`lower(${invitation.email}) = ${email.trim().toLowerCase()}`, eq(invitation.status, "pending"), gt(invitation.expiresAt, new Date())))
+    .limit(1);
+  return Boolean(inv);
+}
 
 /* ---------------- Context ---------------- */
 
@@ -78,17 +141,32 @@ export async function createWorkspace(userId: string, raw: z.input<typeof worksp
     slug = await uniqueWorkspaceSlug(RESERVED_SLUGS.has(base) ? `${base}-ws` : base);
   }
 
+  const adminId = await adminUserId();
   return db.transaction(async (tx) => {
     const [ws] = await tx
       .insert(workspace)
       .values({ name: input.name, slug, timezone: input.timezone, currency: input.currency, createdBy: userId })
       .returning();
     await tx.insert(workspaceMember).values({ workspaceId: ws!.id, userId, role: "owner" });
+    // The administrator owns every workspace, including ones created by invited members.
+    if (adminId && adminId !== userId) await tx.insert(workspaceMember).values({ workspaceId: ws!.id, userId: adminId, role: "owner" });
     await recordAudit(tx, { workspaceId: ws!.id, userId }, {
       action: "workspace.created", targetType: "workspace", targetId: ws!.id, targetLabel: ws!.name,
     });
     return ws!;
   });
+}
+
+/**
+ * Nobody has to set up an organisation before working: anyone without a workspace gets one named after them
+ * ("Rohit's projects"), which they can rename in Settings. Returns the slug of their first workspace.
+ */
+export async function ensureFirstWorkspace(user: { id: string; name: string }) {
+  const [existing] = await listUserWorkspaces(user.id);
+  if (existing) return existing.slug;
+  const first = user.name.trim().split(/\s+/)[0] || "My";
+  const ws = await createWorkspace(user.id, { name: `${first}'s projects`.slice(0, 80) });
+  return ws.slug;
 }
 
 export async function updateWorkspace(ctx: Ctx, raw: z.input<typeof workspaceInput>) {
@@ -126,12 +204,13 @@ export async function deleteWorkspace(ctx: Ctx, confirmSlug: string) {
 
 export async function listMembers(ctx: Ctx) {
   assertCan(ctx, "members.view");
-  return db
+  const rows = await db
     .select({ id: workspaceMember.id, userId: user.id, name: user.name, email: user.email, role: workspaceMember.role, joinedAt: workspaceMember.createdAt })
     .from(workspaceMember)
     .innerJoin(user, eq(user.id, workspaceMember.userId))
     .where(eq(workspaceMember.workspaceId, ctx.workspaceId))
     .orderBy(asc(user.name));
+  return rows.map((r) => ({ ...r, isAdmin: isAdminEmail(r.email) }));
 }
 
 /** Lightweight list for owner/assignee pickers. Any member may see who is in the workspace. */
@@ -163,12 +242,13 @@ async function ownerCount(workspaceId: string) {
 
 async function getMember(ctx: Ctx, memberId: string) {
   const [m] = await db
-    .select({ id: workspaceMember.id, userId: workspaceMember.userId, role: workspaceMember.role, name: user.name })
+    .select({ id: workspaceMember.id, userId: workspaceMember.userId, role: workspaceMember.role, name: user.name, email: user.email })
     .from(workspaceMember)
     .innerJoin(user, eq(user.id, workspaceMember.userId))
     .where(and(eq(workspaceMember.id, memberId), eq(workspaceMember.workspaceId, ctx.workspaceId)))
     .limit(1);
   if (!m) throw notFound("Member");
+  if (isAdminEmail(m.email)) throw forbidden("The administrator account always keeps owner access.");
   return m;
 }
 

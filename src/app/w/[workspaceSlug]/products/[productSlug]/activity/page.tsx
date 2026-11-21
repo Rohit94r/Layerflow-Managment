@@ -11,7 +11,7 @@ export default async function ProductActivity({ params }: PageProps<"/w/[workspa
   const { items } = await listActivity(ctx, { productId: product.id, limit: 100 });
   return (
     <Panel>
-      <ActivityList items={items} slug={ctx.workspaceSlug} emptyText="No activity for this product yet." />
+      <ActivityList items={items} slug={ctx.workspaceSlug} emptyText="No activity for this project yet." />
     </Panel>
   );
 }

@@ -44,13 +44,22 @@ export async function GET(_req: Request, { params }: RouteContext<"/api/w/[works
       .from(schema.integrationConnection).where(eq(schema.integrationConnection.workspaceId, w)),
   ]);
 
+  const [resources, deployments, analyticsDaily, posts] = await Promise.all([
+    db.select({ id: schema.integrationResource.id, connectionId: schema.integrationResource.connectionId, kind: schema.integrationResource.kind, externalId: schema.integrationResource.externalId, name: schema.integrationResource.name, productId: schema.integrationResource.productId, lastSyncAt: schema.integrationResource.lastSyncAt })
+      .from(schema.integrationResource).where(eq(schema.integrationResource.workspaceId, w)),
+    db.select().from(schema.deployment).where(eq(schema.deployment.workspaceId, w)),
+    db.select().from(schema.analyticsDaily).where(eq(schema.analyticsDaily.workspaceId, w)),
+    can(ctx, "content.view") ? db.select().from(schema.contentPost).where(eq(schema.contentPost.workspaceId, w)) : Promise.resolve([]),
+  ]);
+
   const body = JSON.stringify(
     {
       exportedAt: new Date().toISOString(),
-      format: "layerflow-os/v2",
+      format: "flotilla/v2",
       workspace: { name: ctx.workspace.name, slug: ctx.workspace.slug, timezone: ctx.workspace.timezone, currency: ctx.workspace.currency },
       members, groups, products, links, tasks, comments, documents, expenses, revenue, budgets, roadmap, goals,
-      integrations: connections, seo: { daily: seoDaily, insights: seoInsights, audits: seoAudits, uptime },
+      integrations: connections, integrationResources: resources, deployments, analytics: { daily: analyticsDaily }, content: { posts },
+      seo: { daily: seoDaily, insights: seoInsights, audits: seoAudits, uptime },
       automations, automationRuns, approvals, agents, agentRuns, audit,
     },
     null,

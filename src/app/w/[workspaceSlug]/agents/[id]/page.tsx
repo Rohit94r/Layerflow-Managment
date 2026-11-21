@@ -40,7 +40,7 @@ export default async function AgentDetail({ params }: PageProps<"/w/[workspaceSl
         <Stat label="Cost this month" value={`$${(a.stats.monthCost / 1e6).toFixed(2)}`} hint={`Cap $${(a.monthlyBudgetCents / 100).toFixed(2)} · estimated`} />
         <Stat label="Median duration" value={median ? `${Math.round(median / 1000)}s` : "—"} hint={a.lastRunAt ? `Last ${relativeTime(a.lastRunAt)}` : "Never run"} />
       </div>
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <div className="space-y-6">
           <Panel title="Runs">
             {a.runs.length ? (

@@ -45,7 +45,7 @@ function ExpenseFields({ e, products, people, currency }: { e?: Expense; product
         </select>
       </div>
       <div>
-        <label className="label" htmlFor="productId">Product</label>
+        <label className="label" htmlFor="productId">Project</label>
         <select id="productId" name="productId" className="input" defaultValue={e?.productId ?? ""}>
           <option value="">Shared / unallocated</option>
           {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -159,7 +159,7 @@ export function AddRevenue({ slug, products, currency, defaultProductId }: { slu
               </div>
             </div>
             <div>
-              <label className="label" htmlFor="rproduct">Product</label>
+              <label className="label" htmlFor="rproduct">Project</label>
               <select id="rproduct" name="productId" className="input" defaultValue={defaultProductId ?? ""}>
                 <option value="">Unallocated</option>
                 {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}

@@ -81,7 +81,7 @@ export function ProductTable({
                   <input type="checkbox" aria-label="Select all" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))} />
                 </th>
               )}
-              <th>Product</th>
+              <th>Project</th>
               <th>Stage</th>
               <th>Priority</th>
               <th>Health</th>

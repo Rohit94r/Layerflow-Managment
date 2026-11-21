@@ -49,7 +49,7 @@ export default async function NewDocPage({ params, searchParams }: PageProps<"/w
             </div>
           </fieldset>
           <div>
-            <label className="label" htmlFor="productId">Product</label>
+            <label className="label" htmlFor="productId">Project</label>
             <select id="productId" name="productId" className="input" defaultValue={typeof sp.product === "string" ? sp.product : ""}>
               <option value="">Workspace-wide</option>
               {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}

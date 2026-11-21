@@ -10,7 +10,7 @@ import { NoAccess, Panel } from "@/components/ui";
 export default async function ProductSettings({ params }: PageProps<"/w/[workspaceSlug]/products/[productSlug]/settings">) {
   const { workspaceSlug, productSlug } = await params;
   const { ctx, product: p } = await loadProductPage(workspaceSlug, productSlug);
-  if (!can(ctx, "product.edit")) return <NoAccess what="product settings" />;
+  if (!can(ctx, "product.edit")) return <NoAccess what="project settings" />;
   const [people, groups, products] = await Promise.all([listPeople(ctx), listGroups(ctx), productOptions(ctx)]);
   const slug = ctx.workspaceSlug;
 
@@ -32,9 +32,9 @@ export default async function ProductSettings({ params }: PageProps<"/w/[workspa
           <div className="divide-y divide-line">
             <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center">
               <div className="flex-1">
-                <div className="font-medium">{p.archivedAt ? "Restore product" : "Archive product"}</div>
+                <div className="font-medium">{p.archivedAt ? "Restore project" : "Archive project"}</div>
                 <p className="text-[13px] text-muted">
-                  {p.archivedAt ? "Bring it back into the portfolio and command center." : "Hide it from the portfolio. Tasks, docs and history are kept and it can be restored."}
+                  {p.archivedAt ? "Bring it back into the projects list and command center." : "Hide it from the projects list. Tasks, docs and history are kept and it can be restored."}
                 </p>
               </div>
               {p.archivedAt ? (
@@ -49,8 +49,8 @@ export default async function ProductSettings({ params }: PageProps<"/w/[workspa
                   <div className="font-medium">Delete permanently</div>
                   <p className="text-[13px] text-muted">
                     {p.archivedAt
-                      ? "Deletes the product and its links. Tasks, docs and costs stay, unlinked from any product. This can't be undone."
-                      : "Archive the product first. Deletion is only available for archived products."}
+                      ? "Deletes the project and its links. Tasks, docs and costs stay, unlinked from any project. This can't be undone."
+                      : "Archive the project first. Deletion is only available for archived projects."}
                   </p>
                 </div>
                 {p.archivedAt && (

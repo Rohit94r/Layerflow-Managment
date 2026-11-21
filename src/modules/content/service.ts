@@ -25,7 +25,7 @@ const optUrl = z.string().trim().max(2000).optional().nullable().transform((v) =
   .refine((v) => v === null || /^https:\/\/[^\s]+$/i.test(v), "Use a full https:// URL.");
 
 export const postInput = z.object({
-  productId: z.string().min(1, "Choose a product."),
+  productId: z.string().min(1, "Choose a project."),
   title: z.string().trim().min(1, "Title is required.").max(200),
   slug: z.string().trim().max(80).optional(),
   excerpt: z.string().trim().max(500).default(""),
@@ -51,7 +51,7 @@ type Origin = { source: "human" | "agent"; agentInstanceId?: string; agentRunId?
 async function assertProduct(ctx: Ctx, productId: string) {
   const [p] = await db.select({ id: product.id, name: product.name, slug: product.slug }).from(product)
     .where(and(eq(product.id, productId), eq(product.workspaceId, ctx.workspaceId)));
-  if (!p) throw invalid("Unknown product.", { productId: "Unknown product." });
+  if (!p) throw invalid("Unknown project.", { productId: "Unknown project." });
   return p;
 }
 
@@ -279,13 +279,13 @@ export async function publishPost(ctx: Ctx, id: string) {
 
   if (ch.destination === "hosted") {
     if (!ch.hostedEnabled) {
-      await log(ctx.workspaceId, id, { target: "hosted", status: "failed", detail: "Hosted blog is switched off for this product.", actorType });
-      throw invalid("Turn on the hosted blog (product → Content → Publishing) or choose a webhook destination first.");
+      await log(ctx.workspaceId, id, { target: "hosted", status: "failed", detail: "Hosted blog is switched off for this project.", actorType });
+      throw invalid("Turn on the hosted blog (project → Content → Publishing) or choose a webhook destination first.");
     }
     liveUrl = p.canonicalUrl ?? hostedPostUrl(ctx.workspaceSlug, prod!.slug, p.slug);
     await log(ctx.workspaceId, id, { target: "hosted", status: "succeeded", detail: "Live on the hosted blog.", actorType, meta: { url: hostedPostUrl(ctx.workspaceSlug, prod!.slug, p.slug) } });
   } else {
-    if (!ch.webhookUrl || !ch.webhookSecretEnc) throw invalid("Set the webhook URL in the product's publishing settings first.");
+    if (!ch.webhookUrl || !ch.webhookSecretEnc) throw invalid("Set the webhook URL in the project's publishing settings first.");
     const derived = ch.siteBlogUrl ? `${ch.siteBlogUrl.replace(/\/$/, "")}/${p.slug}` : null;
     const r = await deliverWebhook(ch.webhookUrl, decrypt(ch.webhookSecretEnc), "content.published", {
       id: p.id, title: p.title, slug: p.slug, excerpt: p.excerpt, bodyMarkdown: p.body, metaTitle: p.metaTitle || p.title, metaDescription: p.metaDescription,
@@ -350,8 +350,8 @@ export async function requestPublish(ctx: Ctx, input: { postId: string; schedule
   if (ch.publishPolicy === "manual") {
     await toReview();
     const publishers = await membersWithCapability(ctx.workspaceId, "content.publish");
-    await notify(ctx.workspaceId, publishers, { kind: "content_review", severity: "info", title: `Draft ready for review: ${p.title}`, body: `Written by agent “${input.agent.name}”. Publishing on this product is manual.`, href: `/w/${ctx.workspaceSlug}/content/${p.id}`, sourceType: "agent", sourceId: p.id, dedupeKey: `review:${p.id}` });
-    return { status: "awaiting_human" as const, note: "This product's publishing is manual; the draft is waiting for a person." };
+    await notify(ctx.workspaceId, publishers, { kind: "content_review", severity: "info", title: `Draft ready for review: ${p.title}`, body: `Written by agent “${input.agent.name}”. Publishing on this project is manual.`, href: `/w/${ctx.workspaceSlug}/content/${p.id}`, sourceType: "agent", sourceId: p.id, dedupeKey: `review:${p.id}` });
+    return { status: "awaiting_human" as const, note: "This project's publishing is manual; the draft is waiting for a person." };
   }
   const canAuto = ch.publishPolicy === "auto" && can(ctx, "content.publish");
   if (canAuto) {

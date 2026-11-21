@@ -52,7 +52,7 @@ export async function FinanceView({ ctx, productId, currency }: { ctx: Ctx; prod
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="panel px-4 py-3.5">
           <div className="eyebrow">Monthly run-rate (costs)</div>
           <div className="mt-1.5 font-serif text-[1.6rem] leading-tight"><Totals t={summary.monthlyCost} /></div>
@@ -128,7 +128,7 @@ export async function FinanceView({ ctx, productId, currency }: { ctx: Ctx; prod
       )}
 
       {!productId && summary.byProduct.length > 0 && (
-        <Panel title="Monthly cost by product">
+        <Panel title="Monthly cost by project">
           <table className="table">
             <tbody>
               {summary.byProduct
@@ -152,7 +152,7 @@ export async function FinanceView({ ctx, productId, currency }: { ctx: Ctx; prod
                 <tr>
                   <th>Vendor</th>
                   <th>Category</th>
-                  {!productId && <th>Product</th>}
+                  {!productId && <th>Project</th>}
                   <th className="text-right">Amount</th>
                   <th>Billing</th>
                   <th>Renews</th>
@@ -187,7 +187,7 @@ export async function FinanceView({ ctx, productId, currency }: { ctx: Ctx; prod
         )}
       </Panel>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel title="Revenue entries" action={<Badge tone="outline">Manual</Badge>}>
           {revenue.length ? (
             <ul className="divide-y divide-line">

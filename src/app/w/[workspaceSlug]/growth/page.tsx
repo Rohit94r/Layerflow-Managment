@@ -32,7 +32,7 @@ export default async function GrowthPage({ params }: PageProps<"/w/[workspaceSlu
     <>
       <PageHeader
         title="Growth"
-        description="Traffic, search, conversions and content for every product, side by side, with what to do next."
+        description="Traffic, search, conversions and content for every project, side by side, with what to do next."
         actions={
           <>
             {can(ctx, "seo.view") && <Link href={`${base}/seo`} className="btn btn-secondary">SEO</Link>}

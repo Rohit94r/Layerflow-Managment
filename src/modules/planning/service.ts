@@ -15,7 +15,7 @@ const optDate = z.string().optional().nullable().transform((v) => v || null).ref
 async function assertProduct(ctx: Ctx, id: string | null | undefined) {
   if (!id) return;
   const [p] = await db.select({ id: product.id }).from(product).where(and(eq(product.id, id), eq(product.workspaceId, ctx.workspaceId)));
-  if (!p) throw invalid("Unknown product.");
+  if (!p) throw invalid("Unknown project.");
 }
 
 /* ---------------- Roadmap ---------------- */

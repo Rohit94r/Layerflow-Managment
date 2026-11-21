@@ -7,6 +7,7 @@ export function slugify(input: string) {
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
+    .replace(/['’]/g, "") // "Rohit's app" → "rohits-app", not "rohit-s-app"
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);

@@ -24,9 +24,9 @@ export default async function ProductLayout({ children, params }: LayoutProps<"/
       {p.archivedAt && (
         <div className="mb-5 flex flex-wrap items-center gap-3 rounded-lg border border-warn/40 bg-warn-soft px-4 py-2.5 text-[13.5px] text-warn">
           <Archive className="size-4" />
-          <span className="flex-1">This product is archived. It&apos;s hidden from the portfolio and command center.</span>
+          <span className="flex-1">This project is archived. It&apos;s hidden from the projects list and command center.</span>
           {can(ctx, "product.archive") && (
-            <ActionButton onClick={setArchivedAction.bind(null, slug, p.id, false)} successMessage="Product restored.">Restore</ActionButton>
+            <ActionButton onClick={setArchivedAction.bind(null, slug, p.id, false)} successMessage="Project restored.">Restore</ActionButton>
           )}
         </div>
       )}
@@ -34,7 +34,7 @@ export default async function ProductLayout({ children, params }: LayoutProps<"/
         <ProductMark name={p.name} color={p.brandColor} className="size-12 rounded-lg text-xl" />
         <div className="min-w-0 flex-1">
           <div className="eyebrow mb-1">
-            <Link href={`/w/${slug}/products`} className="hover:text-cobalt">Portfolio</Link>
+            <Link href={`/w/${slug}/products`} className="hover:text-ink">Projects</Link>
             {p.parent && (
               <>
                 {" / "}

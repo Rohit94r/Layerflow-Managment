@@ -9,7 +9,9 @@ import { listDocs } from "@/modules/knowledge/service";
 import { label } from "@/modules/portfolio/constants";
 import { docLabel } from "@/modules/knowledge/constants";
 import { taskLabel } from "@/modules/work/constants";
+import { hasVercelConnection, productDeployments } from "@/modules/deploys/service";
 import { ActivityList } from "@/components/activity-list";
+import { DeploymentsPanel } from "@/components/deployments-panel";
 import { ClassificationEditor, LinkManager } from "@/components/client/product-panels";
 import { Badge, LifecycleBadge, Panel, Stat } from "@/components/ui";
 import { formatDate, relativeTime, today } from "@/lib/format";
@@ -19,14 +21,17 @@ export default async function ProductOverview({ params }: PageProps<"/w/[workspa
   const { ctx, product: p, base } = await loadProductPage(workspaceSlug, productSlug);
   const slug = ctx.workspaceSlug;
   const canWork = can(ctx, "work.view");
+  const canSeeDeploys = can(ctx, "integration.view");
 
-  const [people, signals, open, done, activity, docs] = await Promise.all([
+  const [people, signals, open, done, activity, docs, deploys, vercelConnected] = await Promise.all([
     listPeople(ctx),
     attentionSignals(ctx),
     canWork ? listTasks(ctx, { productId: p.id, status: "open" }) : [],
     canWork ? listTasks(ctx, { productId: p.id, status: "done" }) : [],
     can(ctx, "audit.view") ? listActivity(ctx, { productId: p.id, limit: 8 }).then((r) => r.items) : [],
     can(ctx, "docs.view") ? listDocs(ctx, { productId: p.id }) : [],
+    canSeeDeploys ? productDeployments(ctx, p.id) : [],
+    canSeeDeploys ? hasVercelConnection(ctx) : false,
   ]);
   const sigs = signals.get(p.id) ?? [];
   const overdue = open.filter((t) => t.dueDate && t.dueDate < today());
@@ -45,7 +50,7 @@ export default async function ProductOverview({ params }: PageProps<"/w/[workspa
   const filled = facts.filter(([, v]) => v);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       <div className="space-y-6">
         {sigs.length > 0 && (
           <div className="rounded-lg border border-warn/40 bg-warn-soft/60 px-4 py-3">
@@ -120,6 +125,16 @@ export default async function ProductOverview({ params }: PageProps<"/w/[workspa
       </div>
 
       <div className="space-y-6">
+        {canSeeDeploys && (
+          <DeploymentsPanel
+            slug={slug}
+            productId={p.id}
+            projects={deploys}
+            integrationsHref={`/w/${slug}/integrations`}
+            canManage={can(ctx, "integration.manage") && !p.archivedAt}
+            vercelConnected={vercelConnected}
+          />
+        )}
         <Panel title="Classification">
           <ClassificationEditor slug={slug} product={p} people={people} canEdit={can(ctx, "product.edit") && !p.archivedAt} />
         </Panel>

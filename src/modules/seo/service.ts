@@ -127,10 +127,10 @@ async function productSite(ctx: Ctx, productId: string) {
 export async function runAudit(ctx: Ctx, productId: string, maxPages = 25) {
   assertCan(ctx, "seo.run");
   const { product: p, url } = await productSite(ctx, productId);
-  if (!url) throw invalid("Add a Domain or App link to this product first (Overview → Links).");
+  if (!url) throw invalid("Add a Domain or App link to this project first (Overview → Links).");
   const [running] = await db.select({ id: seoAudit.id }).from(seoAudit)
     .where(and(eq(seoAudit.workspaceId, ctx.workspaceId), eq(seoAudit.productId, productId), eq(seoAudit.status, "running"), gte(seoAudit.startedAt, new Date(Date.now() - 10 * 60000))));
-  if (running) throw invalid("An audit is already running for this product.");
+  if (running) throw invalid("An audit is already running for this project.");
   const [a] = await db.insert(seoAudit).values({ workspaceId: ctx.workspaceId, productId, startUrl: url, startedBy: ctx.userId }).returning();
   try {
     const r = await crawl(url, Math.min(maxPages, 50));
@@ -172,7 +172,7 @@ export async function checkUptime(ctx: Pick<Ctx, "workspaceId">, productId: stri
 export async function runUptimeNow(ctx: Ctx, productId: string) {
   assertCan(ctx, "seo.run");
   const { url } = await productSite(ctx, productId);
-  if (!url) throw invalid("Add a Domain or App link to this product first (Overview → Links).");
+  if (!url) throw invalid("Add a Domain or App link to this project first (Overview → Links).");
   return checkUptime(ctx, productId, "manual");
 }
 

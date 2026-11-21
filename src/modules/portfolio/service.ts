@@ -9,6 +9,8 @@ import { isMember } from "../identity/service";
 import { user } from "../identity/schema";
 import { task } from "../work/schema";
 import { expense } from "../finance/schema";
+import { integrationResource } from "../integrations/schema";
+import { deployment } from "../deploys/schema";
 import { OPEN_STATUSES } from "../work/constants";
 import {
   FOCUSES, HEALTHS, LIFECYCLES, LINK_KINDS, PRIORITIES, PRODUCT_ROLES, PRODUCT_TYPES,
@@ -39,7 +41,7 @@ export const productInput = z.object({
   summary: z.string().trim().max(200).default(""),
   description: z.string().trim().max(5000).default(""),
   type: z.enum(PRODUCT_TYPES).default("saas"),
-  brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex colour like #1F3BD1.").default("#1F3BD1"),
+  brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex colour like #171717.").default("#171717"),
   role: z.enum(PRODUCT_ROLES).default("secondary"),
   lifecycle: z.enum(LIFECYCLES).default("idea"),
   priority: z.enum(PRIORITIES).default("p2"),
@@ -69,9 +71,9 @@ async function assertRefs(ctx: Ctx, refs: { ownerId?: string | null; groupId?: s
     if (!g) throw invalid("Unknown group.", { groupId: "Unknown group." });
   }
   if (refs.parentId) {
-    if (refs.parentId === selfId) throw invalid("A product can't be its own parent.", { parentId: "Pick another product." });
+    if (refs.parentId === selfId) throw invalid("A project can't be its own parent.", { parentId: "Pick another project." });
     const [p] = await db.select({ id: product.id }).from(product).where(and(eq(product.id, refs.parentId), eq(product.workspaceId, ctx.workspaceId)));
-    if (!p) throw invalid("Unknown parent product.", { parentId: "Unknown product." });
+    if (!p) throw invalid("Unknown parent project.", { parentId: "Unknown project." });
   }
 }
 
@@ -84,7 +86,7 @@ async function uniqueProductSlug(ctx: Ctx, base: string, excludeId?: string) {
     if (!hit) return candidate;
     candidate = `${base}-${i}`;
   }
-  throw conflict("Could not find a free product address.");
+  throw conflict("Could not find a free project address.");
 }
 
 /* ---------------- Queries ---------------- */
@@ -237,7 +239,7 @@ export async function togglePin(ctx: Ctx, id: string) {
 export async function deleteProduct(ctx: Ctx, id: string) {
   assertCan(ctx, "product.delete");
   const p = await getOwned(ctx, id);
-  if (!p.archivedAt) throw invalid("Archive the product before deleting it.");
+  if (!p.archivedAt) throw invalid("Archive the project before deleting it.");
   await db.transaction(async (tx) => {
     await tx.delete(product).where(eq(product.id, id));
     await recordAudit(tx, ctx, { action: "product.deleted", targetType: "product", targetId: id, targetLabel: p.name });
@@ -339,7 +341,7 @@ export type Signal = { kind: string; label: string; severity: "high" | "medium" 
 export async function attentionSignals(ctx: Ctx) {
   const t = today();
   const soon = addDays(t, 14);
-  const [products, overdue, urgentBugs, renewals] = await Promise.all([
+  const [products, overdue, urgentBugs, renewals, deploys] = await Promise.all([
     db.select({ id: product.id, ownerId: product.ownerId, health: product.health, healthReason: product.healthReason, lifecycle: product.lifecycle, nextReviewDate: product.nextReviewDate })
       .from(product).where(and(eq(product.workspaceId, ctx.workspaceId), isNull(product.archivedAt))),
     db.select({ productId: task.productId, n: count() }).from(task)
@@ -351,6 +353,11 @@ export async function attentionSignals(ctx: Ctx) {
     db.select({ productId: expense.productId, n: count() }).from(expense)
       .where(and(eq(expense.workspaceId, ctx.workspaceId), eq(expense.status, "active"), gte(expense.nextRenewalDate, t), lte(expense.nextRenewalDate, soon), isNotNull(expense.productId)))
       .groupBy(expense.productId),
+    // The newest production deployment of each linked Vercel project.
+    db.selectDistinctOn([deployment.resourceId], { productId: integrationResource.productId, state: deployment.state, project: integrationResource.name })
+      .from(deployment).innerJoin(integrationResource, eq(integrationResource.id, deployment.resourceId))
+      .where(and(eq(deployment.workspaceId, ctx.workspaceId), eq(deployment.target, "production"), isNotNull(integrationResource.productId)))
+      .orderBy(deployment.resourceId, desc(deployment.createdAt)),
   ]);
 
   const map = new Map<string, Signal[]>();
@@ -363,10 +370,11 @@ export async function attentionSignals(ctx: Ctx) {
     else if (p.health === "at_risk") push(p.id, { kind: "health", label: `Marked at risk${p.healthReason ? `: ${p.healthReason}` : ""}`, severity: "medium" });
     if (!p.ownerId) push(p.id, { kind: "owner", label: "No owner assigned", severity: "medium" });
     if (p.nextReviewDate && p.nextReviewDate < t) push(p.id, { kind: "review", label: "Review date has passed", severity: "low" });
-    if (p.health === "unknown" && ["live", "growth"].includes(p.lifecycle)) push(p.id, { kind: "health", label: "Live product with no health assessment", severity: "low" });
+    if (p.health === "unknown" && ["live", "growth"].includes(p.lifecycle)) push(p.id, { kind: "health", label: "Live project with no health assessment", severity: "low" });
   }
   for (const r of overdue) push(r.productId, { kind: "overdue", label: `${r.n} overdue task${r.n === 1 ? "" : "s"}`, severity: "high" });
   for (const r of urgentBugs) push(r.productId, { kind: "bugs", label: `${r.n} open high-priority bug${r.n === 1 ? "" : "s"}`, severity: "high" });
   for (const r of renewals) push(r.productId, { kind: "renewal", label: `${r.n} renewal${r.n === 1 ? "" : "s"} in the next 14 days`, severity: "low" });
+  for (const d of deploys) if (d.state === "error") push(d.productId, { kind: "deploy", label: `Latest production deploy failed on Vercel: ${d.project}`, severity: "high" });
   return map;
 }

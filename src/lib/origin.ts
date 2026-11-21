@@ -16,5 +16,9 @@ export function publicOrigin() {
 /** Every origin this deployment can be reached on (custom domain, production alias, branch and deployment URLs). */
 export function trustedOrigins() {
   const hosts = [process.env.VERCEL_PROJECT_PRODUCTION_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_URL].filter(Boolean);
-  return [...new Set([publicOrigin(), ...hosts.map((h) => `https://${h}`)])];
+  // `pnpm dev` moves to 3001, 3002… when 3000 is busy: allow signing in on whichever local port it picked.
+  const local = process.env.NODE_ENV === "development"
+    ? Array.from({ length: 11 }, (_, i) => 3000 + i).flatMap((port) => [`http://localhost:${port}`, `http://127.0.0.1:${port}`])
+    : [];
+  return [...new Set([publicOrigin(), ...hosts.map((h) => `https://${h}`), ...local])];
 }

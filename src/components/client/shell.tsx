@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   Activity, BarChart3, BookOpen, Bot, Check, ChevronsUpDown, CircleDollarSign, FileText, Home, Inbox, LayoutGrid, ListChecks, LogOut,
-  Map as MapIcon, Menu, Moon, PenSquare, Plug, Plus, Search, Settings, Sun, SunMoon, TrendingUp, Workflow, X,
+  Map as MapIcon, Menu, Moon, PenSquare, Plug, Plus, Search, Settings, Sun, SunMoon, TrendingUp, UserPlus, Users, Workflow, X,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/format";
@@ -22,6 +22,8 @@ export type ShellProps = {
   caps: {
     finance: boolean; audit: boolean; seo: boolean; planning: boolean; automation: boolean; agents: boolean; integrations: boolean;
     content: boolean; growth: boolean; work: boolean; newContent: boolean;
+    /** See the team, invite people, add projects. */
+    team: boolean; invite: boolean; createProject: boolean;
   };
   inboxCount?: number;
   children: React.ReactNode;
@@ -35,10 +37,11 @@ function navGroups(slug: string, caps: ShellProps["caps"], inboxCount: number): 
       items: [
         { href: base, label: "Command center", icon: Home, exact: true },
         { href: `${base}/inbox`, label: "Inbox", icon: Inbox, badge: inboxCount },
-        { href: `${base}/products`, label: "Portfolio", icon: LayoutGrid },
+        { href: `${base}/products`, label: "Projects", icon: LayoutGrid },
         ...(caps.work ? [{ href: `${base}/work`, label: "Work", icon: ListChecks }] : []),
         ...(caps.planning ? [{ href: `${base}/roadmap`, label: "Roadmap & goals", icon: MapIcon }] : []),
         { href: `${base}/docs`, label: "Docs & decisions", icon: BookOpen },
+        ...(caps.team ? [{ href: `${base}/team`, label: "Team", icon: Users }] : []),
       ],
     },
     {
@@ -79,9 +82,9 @@ function BottomBar({ slug, caps, inboxCount, onMenu }: { slug: string; caps: She
   const base = `/w/${slug}`;
   const items: Nav[] = [
     { href: base, label: "Home", icon: Home, exact: true },
-    caps.work ? { href: `${base}/work`, label: "Work", icon: ListChecks } : { href: `${base}/products`, label: "Portfolio", icon: LayoutGrid },
+    { href: `${base}/products`, label: "Projects", icon: LayoutGrid },
+    caps.work ? { href: `${base}/work`, label: "Work", icon: ListChecks } : { href: `${base}/docs`, label: "Docs", icon: BookOpen },
     { href: `${base}/inbox`, label: "Inbox", icon: Inbox, badge: inboxCount },
-    caps.growth ? { href: `${base}/growth`, label: "Growth", icon: BarChart3 } : caps.content ? { href: `${base}/content`, label: "Content", icon: PenSquare } : { href: `${base}/docs`, label: "Docs", icon: BookOpen },
   ];
   const active = (n: Nav) => (n.exact ? pathname === n.href : pathname === n.href || pathname.startsWith(`${n.href}/`));
   return (
@@ -90,7 +93,7 @@ function BottomBar({ slug, caps, inboxCount, onMenu }: { slug: string; caps: She
         {items.map((n) => (
           <li key={n.href}>
             <Link href={n.href} aria-current={active(n) ? "page" : undefined}
-              className={cn("relative flex h-14 flex-col items-center justify-center gap-0.5 text-[10.5px]", active(n) ? "text-cobalt" : "text-muted")}>
+              className={cn("relative flex h-14 flex-col items-center justify-center gap-0.5 text-[10.5px]", active(n) ? "font-semibold text-ink" : "text-muted")}>
               <n.icon className="size-5" />
               {n.label}
               {n.badge ? <span className="absolute left-1/2 top-1.5 ml-1.5 min-w-4 rounded-full bg-bad px-1 text-center text-[10px] font-semibold leading-4 text-white">{n.badge > 99 ? "99+" : n.badge}</span> : null}
@@ -133,7 +136,14 @@ export function Shell(props: ShellProps) {
         <Link href={`/w/${props.slug}`}>
           <Logo />
         </Link>
-        <PaletteButton compact />
+        <div className="-mr-2 flex items-center">
+          <PaletteButton compact />
+          {props.caps.createProject && (
+            <Link href={`/w/${props.slug}/products/new`} className="btn btn-ghost px-2" aria-label="Add project" title="Add project">
+              <Plus className="size-5" />
+            </Link>
+          )}
+        </div>
       </div>
       {drawer && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
@@ -148,10 +158,35 @@ export function Shell(props: ShellProps) {
       )}
 
       <main className="min-w-0">
-        <div className="mx-auto w-full max-w-[1240px] px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] pt-6 sm:px-6 lg:px-10 lg:py-9">{props.children}</div>
+        <TopBar slug={props.slug} caps={props.caps} />
+        <div className="mx-auto w-full max-w-[1240px] px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] pt-6 sm:px-6 lg:px-10 lg:py-8">{props.children}</div>
       </main>
       <BottomBar slug={props.slug} caps={props.caps} inboxCount={props.inboxCount ?? 0} onMenu={() => setDrawer(true)} />
       <CommandPalette slug={props.slug} products={props.products} caps={props.caps} />
+    </div>
+  );
+}
+
+/** Desktop top bar: search on the left; the two things you do most, invite and add a project, on the right. */
+function TopBar({ slug, caps }: { slug: string; caps: ShellProps["caps"] }) {
+  const base = `/w/${slug}`;
+  return (
+    <div className="sticky top-0 z-20 hidden h-14 items-center gap-3 border-b border-line bg-bg/95 px-10 backdrop-blur lg:flex">
+      <div className="w-full max-w-sm">
+        <PaletteButton />
+      </div>
+      <div className="ml-auto flex items-center gap-2">
+        {caps.invite && (
+          <Link href={`${base}/team#invite`} className="btn btn-secondary">
+            <UserPlus className="size-4" /> Invite member
+          </Link>
+        )}
+        {caps.createProject && (
+          <Link href={`${base}/products/new`} className="btn btn-primary">
+            <Plus className="size-4" /> Add project
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
@@ -172,7 +207,7 @@ function Sidebar({ slug, workspaceName, workspaces, products, user, caps, inboxC
         </Link>
         <WorkspaceSwitcher slug={slug} name={workspaceName} workspaces={workspaces} />
       </div>
-      <div className="px-3 pb-2">
+      <div className="px-3 pb-2 lg:hidden">
         <PaletteButton />
       </div>
       <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label="Main">
@@ -201,8 +236,8 @@ function Sidebar({ slug, workspaceName, workspaces, products, user, caps, inboxC
         ))}
 
         <div className="mt-6 flex items-center justify-between px-2.5">
-          <span className="eyebrow">{shown.length ? "Pinned" : "Products"}</span>
-          <Link href={`${base}/products/new`} className="text-muted hover:text-cobalt" aria-label="New product" title="New product">
+          <span className="eyebrow">{shown.length ? "Pinned projects" : "Projects"}</span>
+          <Link href={`${base}/products/new`} className="text-muted hover:text-ink" aria-label="Add project" title="Add project">
             <Plus className="size-3.5" />
           </Link>
         </div>
@@ -219,13 +254,13 @@ function Sidebar({ slug, workspaceName, workspaces, products, user, caps, inboxC
                     active ? "bg-sunken text-ink" : "text-ink-2 hover:bg-sunken hover:text-ink",
                   )}
                 >
-                  <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: p.brandColor }} />
+                  <span className="size-2.5 shrink-0 rounded-[3px] ring-1 ring-line-strong" style={{ background: p.brandColor }} />
                   <span className="truncate">{p.name}</span>
                 </Link>
               </li>
             );
           })}
-          {!products.length && <li className="px-2.5 py-1 text-[12.5px] text-muted">No products yet.</li>}
+          {!products.length && <li className="px-2.5 py-1 text-[12.5px] text-muted">No projects yet.</li>}
         </ul>
       </nav>
       <UserMenu user={user} />
@@ -245,7 +280,7 @@ function WorkspaceSwitcher({ slug, name, workspaces }: { slug: string; name: str
   return (
     <details ref={ref} className="group relative">
       <summary className="flex h-10 cursor-pointer list-none items-center gap-2.5 rounded-md border border-line bg-surface px-2.5 hover:border-line-strong [&::-webkit-details-marker]:hidden">
-        <span className="hatch grid size-6 shrink-0 place-items-center rounded border border-line-strong font-serif text-[12px]">{name[0]?.toUpperCase()}</span>
+        <span className="grid size-6 shrink-0 place-items-center rounded bg-ink text-[12px] font-semibold text-bg">{name[0]?.toUpperCase()}</span>
         <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{name}</span>
         <ChevronsUpDown className="size-3.5 text-muted" />
       </summary>
@@ -254,7 +289,7 @@ function WorkspaceSwitcher({ slug, name, workspaces }: { slug: string; name: str
         {workspaces.map((w) => (
           <Link key={w.slug} href={`/w/${w.slug}`} className="flex h-8 items-center gap-2 rounded-md px-2 text-[13.5px] hover:bg-sunken">
             <span className="min-w-0 flex-1 truncate">{w.name}</span>
-            {w.slug === slug && <Check className="size-3.5 text-cobalt" />}
+            {w.slug === slug && <Check className="size-3.5 text-ink" />}
           </Link>
         ))}
         <div className="my-1 border-t border-line" />
@@ -374,11 +409,13 @@ function CommandPalette({ slug, products, caps }: { slug: string; products: Shel
 
   const staticItems = useMemo<Item[]>(
     () => [
-      { id: "new-product", label: "New product", href: `${base}/products/new`, icon: Plus },
+      ...(caps.createProject ? [{ id: "new-project", label: "Add project", href: `${base}/products/new`, icon: Plus }] : []),
+      ...(caps.invite ? [{ id: "invite", label: "Invite team member", href: `${base}/team#invite`, icon: UserPlus }] : []),
       { id: "new-task", label: "New task", href: `${base}/work?new=1`, icon: Plus },
       { id: "new-doc", label: "New document or decision", href: `${base}/docs/new`, icon: Plus },
       { id: "home", label: "Command center", href: base, icon: Home },
-      { id: "portfolio", label: "Portfolio", href: `${base}/products`, icon: LayoutGrid },
+      { id: "projects", label: "All projects", href: `${base}/products`, icon: LayoutGrid },
+      ...(caps.team ? [{ id: "team", label: "Team", href: `${base}/team`, icon: Users }] : []),
       { id: "work", label: "Work", href: `${base}/work`, icon: ListChecks },
       { id: "my-work", label: "My open tasks", href: `${base}/work?assignee=me`, icon: ListChecks },
       { id: "docs", label: "Docs & decisions", href: `${base}/docs`, icon: BookOpen },
@@ -394,7 +431,7 @@ function CommandPalette({ slug, products, caps }: { slug: string; products: Shel
       ...(caps.finance ? [{ id: "finance", label: "Finance", href: `${base}/finance`, icon: CircleDollarSign }] : []),
       ...(caps.audit ? [{ id: "activity", label: "Activity", href: `${base}/activity`, icon: Activity }] : []),
       { id: "settings", label: "Settings", href: `${base}/settings`, icon: Settings },
-      ...products.map((p) => ({ id: `p-${p.slug}`, label: p.name, hint: "Product", href: `${base}/products/${p.slug}`, icon: LayoutGrid })),
+      ...products.map((p) => ({ id: `p-${p.slug}`, label: p.name, hint: "Project", href: `${base}/products/${p.slug}`, icon: LayoutGrid })),
     ],
     [base, products, caps],
   );
@@ -448,7 +485,7 @@ function CommandPalette({ slug, products, caps }: { slug: string; products: Shel
           data.hits.map((h) => ({
             id: `${h.type}-${h.id}`,
             label: h.title,
-            hint: h.type === "task" ? `Task · ${h.subtitle}` : h.type === "doc" ? `Doc · ${h.subtitle}` : "Product",
+            hint: h.type === "task" ? `Task · ${h.subtitle}` : h.type === "doc" ? `Doc · ${h.subtitle}` : "Project",
             href: h.href,
             icon: h.type === "task" ? ListChecks : h.type === "doc" ? FileText : LayoutGrid,
           })),
@@ -495,7 +532,7 @@ function CommandPalette({ slug, products, caps }: { slug: string; products: Shel
                 setIndex((i) => Math.max(i - 1, 0));
               } else if (e.key === "Enter") go(filtered[index]);
             }}
-            placeholder="Search products, tasks (#12), docs… or type a command"
+            placeholder="Search projects, tasks (#12), docs… or type a command"
             className="h-12 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted"
             aria-label="Search"
           />

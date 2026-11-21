@@ -1,83 +1,84 @@
 @import "tailwindcss";
 
 /*
- * Design tokens — "Riviera print": cream paper, cobalt ink, navy type.
+ * Design tokens: black and white. Ink on paper in light mode, paper on ink in dark mode.
+ * The "cobalt" tokens are the accent and are monochrome too; only status colours (good, warn, bad) carry hue.
  * Components read only these variables, so a re-theme never touches feature code.
  */
 :root {
-  --bg: #f8e7d1;
-  --surface: #fcf3e7;
-  --sunken: #f1dcc1;
-  --line: #e5cdae;
-  --line-strong: #d4b691;
-  --ink: #0b1557;
-  --ink-2: #363d72;
-  --muted: #74778f;
-  --cobalt: #1d36c9;
-  --cobalt-strong: #13259b;
-  --cobalt-soft: #e3dfec;
-  --chart: #1d36c9; /* validated: lightness band, chroma, ≥3:1 vs surface */
-  --on-cobalt: #fcf3e7;
-  --good: #2e6b45;
-  --good-soft: #dfe5cf;
-  --warn: #9a5a0c;
-  --warn-soft: #f3d9b4;
-  --bad: #a3262c;
-  --bad-soft: #f1cfc0;
-  --focus: #1d36c9;
-  --shadow: 0 1px 0 rgba(11, 21, 87, 0.04), 0 12px 32px -12px rgba(11, 21, 87, 0.18);
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --sunken: #f5f5f5;
+  --line: #e7e7e7;
+  --line-strong: #d4d4d4;
+  --ink: #0a0a0a;
+  --ink-2: #3f3f3f;
+  --muted: #737373;
+  --cobalt: #0a0a0a;
+  --cobalt-strong: #2b2b2b;
+  --cobalt-soft: #efefef;
+  --chart: #171717;
+  --on-cobalt: #ffffff;
+  --good: #1f7a3f;
+  --good-soft: #eaf6ee;
+  --warn: #9a5b06;
+  --warn-soft: #fbf1df;
+  --bad: #b42318;
+  --bad-soft: #fcebea;
+  --focus: #0a0a0a;
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.03), 0 12px 32px -12px rgba(0, 0, 0, 0.16);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #090e2e;
-    --surface: #0f1640;
-    --sunken: #0b1136;
-    --line: #1f2a66;
-    --line-strong: #2d3a80;
-    --ink: #f8e7d1;
-    --ink-2: #d8cbb8;
-    --muted: #8f94bb;
-    --cobalt: #8094ff;
-    --cobalt-strong: #a3b2ff;
-    --cobalt-soft: #1a2464;
-    --chart: #7488f5;
-    --on-cobalt: #090e2e;
-    --good: #8cc7a0;
-    --good-soft: #15302a;
-    --warn: #e7b46a;
-    --warn-soft: #36290f;
-    --bad: #f0928d;
-    --bad-soft: #3a1620;
-    --focus: #a3b2ff;
-    --shadow: 0 1px 0 rgba(0, 0, 0, 0.2), 0 16px 40px -16px rgba(0, 0, 0, 0.6);
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --sunken: #1a1a1a;
+    --line: #262626;
+    --line-strong: #3a3a3a;
+    --ink: #fafafa;
+    --ink-2: #d4d4d4;
+    --muted: #a1a1a1;
+    --cobalt: #fafafa;
+    --cobalt-strong: #e5e5e5;
+    --cobalt-soft: #262626;
+    --chart: #e5e5e5;
+    --on-cobalt: #0a0a0a;
+    --good: #6fd391;
+    --good-soft: #10291a;
+    --warn: #f1c056;
+    --warn-soft: #2b2108;
+    --bad: #f58a83;
+    --bad-soft: #2e1212;
+    --focus: #fafafa;
+    --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 16px 40px -16px rgba(0, 0, 0, 0.7);
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #090e2e;
-  --surface: #0f1640;
-  --sunken: #0b1136;
-  --line: #1f2a66;
-  --line-strong: #2d3a80;
-  --ink: #f8e7d1;
-  --ink-2: #d8cbb8;
-  --muted: #8f94bb;
-  --cobalt: #8094ff;
-  --cobalt-strong: #a3b2ff;
-  --cobalt-soft: #1a2464;
-  --chart: #7488f5;
-  --on-cobalt: #090e2e;
-  --good: #8cc7a0;
-  --good-soft: #15302a;
-  --warn: #e7b46a;
-  --warn-soft: #36290f;
-  --bad: #f0928d;
-  --bad-soft: #3a1620;
-  --focus: #a3b2ff;
-  --shadow: 0 1px 0 rgba(0, 0, 0, 0.2), 0 16px 40px -16px rgba(0, 0, 0, 0.6);
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --sunken: #1a1a1a;
+  --line: #262626;
+  --line-strong: #3a3a3a;
+  --ink: #fafafa;
+  --ink-2: #d4d4d4;
+  --muted: #a1a1a1;
+  --cobalt: #fafafa;
+  --cobalt-strong: #e5e5e5;
+  --cobalt-soft: #262626;
+  --chart: #e5e5e5;
+  --on-cobalt: #0a0a0a;
+  --good: #6fd391;
+  --good-soft: #10291a;
+  --warn: #f1c056;
+  --warn-soft: #2b2108;
+  --bad: #f58a83;
+  --bad-soft: #2e1212;
+  --focus: #fafafa;
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 16px 40px -16px rgba(0, 0, 0, 0.7);
   color-scheme: dark;
 }
 
@@ -101,7 +102,8 @@
   --color-warn-soft: var(--warn-soft);
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
-  --font-serif: var(--font-display), "Iowan Old Style", Georgia, serif;
+  /* One typeface throughout: "font-serif" is kept as a name for headings but is the same sans. */
+  --font-serif: var(--font-text), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-text), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-code), ui-monospace, monospace;
   --shadow-float: var(--shadow);
@@ -121,8 +123,8 @@
   }
   h1, h2, h3 {
     font-family: var(--font-serif);
-    font-weight: 500;
-    letter-spacing: -0.01em;
+    font-weight: 600;
+    letter-spacing: -0.02em;
     color: var(--ink);
   }
   ::selection {
@@ -177,8 +179,8 @@
     color: var(--ink);
   }
   .btn-secondary:hover:not(:disabled) {
-    border-color: var(--cobalt);
-    color: var(--cobalt);
+    border-color: var(--ink);
+    background: var(--sunken);
   }
   .btn-ghost {
     color: var(--ink-2);
@@ -219,7 +221,7 @@
   select.input {
     padding-right: 1.8rem;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2374778f' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.6rem center;
   }
@@ -228,8 +230,8 @@
   }
   .input:focus {
     outline: none;
-    border-color: var(--cobalt);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cobalt) 18%, transparent);
+    border-color: var(--ink);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 12%, transparent);
   }
   .input[aria-invalid="true"] {
     border-color: var(--bad);
@@ -274,8 +276,9 @@
   }
   .panel-title {
     font-family: var(--font-serif);
-    font-size: 16px;
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 
   .eyebrow {
@@ -313,15 +316,18 @@
     background: color-mix(in srgb, var(--sunken) 55%, transparent);
   }
 
+  /* Monochrome links are underlined so they stay recognisable without colour. */
   .link {
-    color: var(--cobalt);
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
     text-underline-offset: 3px;
   }
   .link:hover {
-    text-decoration: underline;
+    text-decoration-color: var(--ink);
   }
 
-  /* Engraving-style hatching, echoing the cobalt print illustration. */
+  /* Fine diagonal hatching for placeholder tiles. */
   .hatch {
     background-image: repeating-linear-gradient(
       -45deg,
@@ -377,11 +383,12 @@
     padding: 0;
   }
   .prose-doc a {
-    color: var(--cobalt);
+    color: var(--ink);
     text-decoration: underline;
+    text-underline-offset: 3px;
   }
   .prose-doc blockquote {
-    border-left: 3px solid var(--cobalt);
+    border-left: 3px solid var(--line-strong);
     padding-left: 0.9rem;
     color: var(--muted);
   }

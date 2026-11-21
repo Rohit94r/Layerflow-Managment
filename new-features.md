@@ -33,7 +33,7 @@ Nothing marked Proposed exists yet. Don't assume it does.
   - Index page plus post pages with canonical URLs, Open Graph, Twitter cards, `BlogPosting` and `BreadcrumbList` JSON-LD, related posts, and a reading-first mobile layout in the product's brand colour.
   - `rss.xml`, `sitemap.xml` and `feed.json` (JSON Feed 1.1, CORS-enabled, so your own sites can *pull* posts) and `indexnow-key.txt`.
   - Only published posts of products with the blog switched on are ever public. Switching it off hides everything immediately.
-- **Webhook to your own site.** Each published post is POSTed as JSON, signed with HMAC-SHA256: `X-LayerFlow-Signature: sha256=…` over `` `${timestamp}.${body}` `` with `X-LayerFlow-Timestamp`.
+- **Webhook to your own site.** Each published post is POSTed as JSON, signed with HMAC-SHA256: `X-Flotilla-Signature: sha256=…` over `` `${timestamp}.${body}` `` with `X-Flotilla-Timestamp`.
   - Only a 2xx response marks the post published. Reply `{ "url": "https://…" }` to record the live URL.
   - Unpublishing sends `content.unpublished`.
   - The signing secret is encrypted at rest and can be rotated. Requests go through the SSRF guard: public https only, no redirects.
@@ -42,24 +42,28 @@ Nothing marked Proposed exists yet. Don't assume it does.
 **Receiving posts in a Next.js site** (route handler sketch):
 
 ```ts
-// app/api/layerflow/publish/route.ts
+// app/api/flotilla/publish/route.ts
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export async function POST(req: Request) {
   const raw = await req.text();
-  const ts = req.headers.get("x-layerflow-timestamp") ?? "";
-  const sig = req.headers.get("x-layerflow-signature") ?? "";
-  const expected = `sha256=${createHmac("sha256", process.env.LAYERFLOW_SECRET!).update(`${ts}.${raw}`).digest("hex")}`;
+  const ts = req.headers.get("x-flotilla-timestamp") ?? "";
+  const sig = req.headers.get("x-flotilla-signature") ?? "";
+  const expected = `sha256=${createHmac("sha256", process.env.FLOTILLA_SECRET!).update(`${ts}.${raw}`).digest("hex")}`;
   const fresh = Math.abs(Date.now() / 1000 - Number(ts)) < 300;
   if (!fresh || sig.length !== expected.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
     return new Response("bad signature", { status: 401 });
   }
   const { event, post } = JSON.parse(raw);
   // event: "content.published" | "content.unpublished"
-  // Save post.bodyMarkdown to your CMS / database / repo here.
+  // Save (or delete) post.bodyMarkdown in your CMS / database / repo here, then refresh the cached pages:
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${post.slug}`);
   return Response.json({ url: `https://your-site.com/blog/${post.slug}` });
 }
 ```
+
+Add `import { revalidatePath } from "next/cache";` at the top, and set `FLOTILLA_SECRET` (the channel's signing secret) in that site's Vercel environment variables. Put the route's public URL (for example `https://your-site.com/api/flotilla/publish`) in the product's Content → Publishing settings.
 
 ### 1.3 Agents that write and publish (`CORE`, Shipped)
 
@@ -150,7 +154,26 @@ export async function POST(req: Request) {
 | `analytics.view` | ✓ | ✓ | ✓ | ✓ | ✓ | – | – |
 | Turn on **auto** publishing | ✓ | ✓ | – | – | – | – | – |
 
-### 1.10 Setup checklist (to use what shipped)
+### 1.10 Vercel connector (`V1`, Shipped 2026-11-21)
+
+Built because every product site is a Next.js app deployed on Vercel. Setup steps are in [README → Vercel deployments](README.md#vercel-deployments).
+
+- **Connect with an access token** that the owner creates in Vercel and pastes in Integrations. Flotilla checks it against `GET /v2/user` before storing it, encrypted. No server env var or Vercel marketplace app is needed. Flotilla only sends read requests: projects (`/v10/projects`), deployments (`/v7/deployments`) and domains (`/v9/projects/{id}/domains`), for the personal account and every team the token can see.
+- **Explicit mapping**: each Vercel project is linked to one product, like Search Console and GA4 properties. Linking syncs straight away and adds the product's **Domain** (the verified, non-redirect production domain) and **Repository** links when the product has none. Existing links are never changed.
+- **Product → Overview → Deployments**: production state (Ready, Failed, Building, Queued, Canceled, Blocked), the production domain, the commit, branch and author, and build logs on failure. When the newest build failed, the panel names the deployment that is still serving. It also lists the 8 most recent deployments, previews included. The latest 50 deployments per project are stored.
+- **Freshness without a paid plan**: opening a product refreshes data older than 2 minutes in the background. Sync now and every scheduler run (Vercel is synced on each run) refresh it too.
+- **Instant updates (optional)**: a Vercel team webhook (Pro or Enterprise) pointed at `/api/integrations/vercel/webhook?connection=<id>`. Each delivery is verified with `x-vercel-signature` (HMAC-SHA1 of the raw body, compared in constant time). A verified deployment event re-syncs that project from the API, so a replayed body can't write anything Vercel doesn't confirm.
+- **Failed production deploys** create an attention signal on the product and portfolio. The new **Production deploy failed → alert** automation notifies the product owner once per failed deployment, with the build-log link. It runs right after each Vercel sync.
+- **Token lifecycle**: an expired or deleted token puts the connection in **Reconnect needed**. Pasting a new token for the same account restores it and keeps the project links. Disconnecting deletes the token from Flotilla (delete it in Vercel too) and can delete all synced deployments.
+- Migration `0003_vercel`: a `deployment` table, plus `webhook_secret_enc` and `webhook_last_at` on `integration_connection`.
+
+**Fixed with this change**
+
+- A transient sync failure (Google or Vercel unavailable) left the connection in "Sync failed" even after the next sync succeeded, and the scheduler stopped retrying it. Successful syncs now clear the error, and the scheduler retries connections in that state.
+- Mapping a property or project now records product names, not ids, in the activity log.
+- The JSON export now also includes integration resources, deployments, GA4 daily data and content posts. Tokens and secrets are still never exported.
+
+### 1.11 Setup checklist (to use what shipped)
 
 1. Set `BETTER_AUTH_URL` to your real https domain. It is also the hosted-blog origin.
 2. In Google Cloud, enable the Search Console API, Analytics Data API and Analytics Admin API. Add both redirect URIs from `.env.example`.
@@ -237,7 +260,7 @@ export async function POST(req: Request) {
 | # | Feature | Tag | What it does |
 |---|---|---|---|
 | E1 | **GitHub connector** | CORE (next) | Repos ↔ products, PRs, releases; release → changelog/blog draft. |
-| E2 | **Vercel connector** | V1 | Deployments per product; failed-deploy → incident automation. |
+| E2 | ~~Vercel connector~~ | V1 | **Shipped 2026-11-21**: see §1.10. |
 | E3 | **Status page per product** | V2 | Public uptime history from the existing checks. |
 | E4 | **Background job platform** | V1 | Move sync, agents and publishing from cron + `after()` to Inngest/Trigger.dev when runs exceed serverless limits (BUILD.md decision 10). |
 | E5 | **Row-level security** | CORE (before outside users) | Second tenant-isolation layer (BUILD.md §3.1). |
@@ -265,4 +288,6 @@ export async function POST(req: Request) {
 
 | Date | Change |
 |---|---|
+| 2026-11-21 | Workspace created automatically on first sign-in (no setup step); **Add project** and **Invite member** in a top bar on every page; new **Team** page (members, roles, invitations); "products" are called "projects" throughout the interface; black-and-white design with one sans-serif typeface; new long landing page. Tests: 86. |
+| 2026-11-21 | Vercel connector (deployments per product, failed-deploy signal and alert, optional webhook), sync-recovery fix, export completeness. Migration `0003_vercel`. Tests: 15 new (84 total). |
 | 2026-11-19 | Content Studio, hosted blog plus feeds, signed webhook publishing, IndexNow, Content Writer and Growth Analyst agents, GA4 connector, Growth dashboard, next best actions, portfolio pulse, two new automations, mobile tab bar and PWA. Migration `0002_growth`. Tests: 24 new (56 total). |

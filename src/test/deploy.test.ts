@@ -35,3 +35,19 @@ describe("public origin on Vercel and locally", () => {
     expect(trustedOrigins()).toContain("https://app.example.com");
   });
 });
+
+describe("local development ports", () => {
+  it("trusts localhost on the port pnpm dev picked, only in development", () => {
+    const nodeEnv = process.env.NODE_ENV;
+    env({ BETTER_AUTH_URL: "http://localhost:3000" });
+    try {
+      (process.env as Record<string, string>).NODE_ENV = "development";
+      expect(trustedOrigins()).toContain("http://localhost:3001");
+      expect(trustedOrigins()).toContain("http://127.0.0.1:3002");
+      (process.env as Record<string, string>).NODE_ENV = "production";
+      expect(trustedOrigins()).toEqual(["http://localhost:3000"]);
+    } finally {
+      (process.env as Record<string, string>).NODE_ENV = nodeEnv!;
+    }
+  });
+});

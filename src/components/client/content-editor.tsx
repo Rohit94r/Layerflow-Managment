@@ -73,7 +73,7 @@ export function PostEditor({ slug, post, readOnly, publicBase }: { slug: string;
 
   const seoTitle = v.metaTitle || v.title;
   return (
-    <ActionForm action={savePostAction.bind(null, slug, post.id)} onSuccess={() => setDirty(false)} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <ActionForm action={savePostAction.bind(null, slug, post.id)} onSuccess={() => setDirty(false)} className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0 space-y-4" ref={(el) => { formRef.current = el?.closest("form") ?? null; }}>
         <input name="title" value={v.title} onChange={set("title")} readOnly={readOnly} required maxLength={200} aria-label="Title" placeholder="Post title"
           className="w-full bg-transparent font-serif text-[1.7rem] leading-tight outline-none sm:text-[2rem]" />
@@ -93,7 +93,7 @@ export function PostEditor({ slug, post, readOnly, publicBase }: { slug: string;
         </div>
         <div className={tab === "write" ? "" : "hidden"}>
           <textarea name="body" value={v.body} onChange={set("body")} readOnly={readOnly} aria-label="Body (Markdown)"
-            placeholder={"Start with a direct answer that includes your keyword.\n\n## First section\n\nShort paragraphs, practical steps, links to your product."}
+            placeholder={"Start with a direct answer that includes your keyword.\n\n## First section\n\nShort paragraphs, practical steps, links to your project."}
             className="input min-h-[60vh] font-mono text-[13.5px] leading-relaxed" />
         </div>
         {tab === "preview" && (

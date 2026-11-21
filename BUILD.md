@@ -35,14 +35,14 @@ Not a Jira, Notion, Stripe, or analytics replacement. Not every integration. Not
 | Stack | Next.js 16, React 19, TypeScript, Tailwind 4, Drizzle 0.45, Better Auth 1.7, Zod 4. See §3 for deviations from the original plan. |
 | Database | Embedded PGlite (real Postgres in WASM) when `DATABASE_URL` is empty; any Postgres/Neon URL in staging and production. Same migrations for both. |
 | Design | Finalised from the supplied "Corniche" reference: cream paper, cobalt ink, navy serif type. See §9. |
-| Product name | Working name **LayerFlow OS**, set in one place: `src/lib/brand.ts`. |
-| Quality gates | `pnpm lint`, `pnpm typecheck`, `pnpm test` (56 tests: tenant isolation, permissions, domain rules, SEO rules, SSRF guard, encryption, automation idempotency, approvals, agent tool authorisation, content workflow and publish policies, public-blog visibility, webhook signing, GA4 parsing, growth read models), `pnpm build`. All passing. |
+| Product name | **Flotilla** (21 Nov 2026), set in one place: `src/lib/brand.ts`. |
+| Quality gates | `pnpm lint`, `pnpm typecheck`, `pnpm test` (84 tests: built-in administrator and invitation-only sign-up, Vercel connector (token check, discovery, deployment sync, alerts, webhook signatures, token expiry), tenant isolation, permissions, domain rules, SEO rules, SSRF guard, encryption, automation idempotency, approvals, agent tool authorisation, content workflow and publish policies, public-blog visibility, webhook signing, GA4 parsing, growth read models), `pnpm build`. All passing. |
 | Growth engine (19 Nov 2026) | Content Studio + hosted blog + webhook publishing, Content Writer and Growth Analyst agents, GA4 connector, Growth dashboard, next best actions, mobile tab bar and PWA. Details and the proposed roadmap: [new-features.md](new-features.md). |
 | Needs configuration | Google Search Console and Analytics 4 (`GOOGLE_CLIENT_ID/SECRET`), agents (`ANTHROPIC_API_KEY`), scheduler (`CRON_SECRET`), production token key (`TOKEN_ENCRYPTION_KEY`). Without them those features show a setup state; everything else works. See `.env.example`. |
 
 ### What works today
 
-- Email and password sign-up and sign-in, sessions, sign-out.
+- Email and password sign-in, sessions, sign-out. Built-in administrator account (`src/server/auth/admin.ts`), created or repaired on every server start and owner of every workspace. Sign-up is by invitation only.
 - Workspaces: create, switch, rename, change address, timezone and currency, delete with typed confirmation.
 - Members: invite by single-use link (7-day expiry, bound to the invited email), seven roles, change role, remove, leave. The last owner is protected.
 - Product registry: create, edit, archive, restore, delete (archive first), pin, groups, parent/child products, links, tech stack, tags, review dates.
@@ -575,13 +575,16 @@ No compliance claims are made anywhere in the product or marketing until indepen
 | 10 | 2026-11-13 | Cron endpoint + `after()` instead of Inngest | No queue infrastructure needed yet; all work idempotent | Jobs exceed serverless time limits |
 | 11 | 2026-11-13 | Agents call Claude Opus 5.5 through the official SDK with a manual tool loop | Full control over per-call authorisation, budget and audit | Managed Agents if sandboxed code/browser tools are needed |
 | 12 | 2026-11-13 | Agents may only read, draft, and propose | Master prompt §16.6: consequential actions need approval | A specific action earns a pre-approved policy |
+| 13 | 2026-11-21 | Product named **Flotilla** | "LayerFlow" is one of the portfolio's own products; the tool needed its own name | — |
+| 14 | 2026-11-21 | Built-in administrator (fixed email and password in `src/server/auth/admin.ts`), owner of every workspace; sign-up by invitation only | Private tool for one founder and invited collaborators; protects the server's API keys on a public URL | Opening the product to other founders |
+| 15 | 2026-11-21 | Vercel connects with a pasted access token, not a Vercel marketplace integration (OAuth) | Every product site is on Vercel; a token needs no app registration, review or env vars, and works for personal accounts and teams. Flotilla only sends read requests | Opening the product to other founders (a marketplace integration gives scoped installs) |
 
 ---
 
 ## 15. Open questions
 
 1. **Remaining connectors** — GitHub, Vercel, Stripe, PostHog, GA4 are listed as planned. Which comes next?
-2. **Product name** — "LayerFlow OS" is a working name in `src/lib/brand.ts`.
+2. **Product name** — decided: **Flotilla** (`src/lib/brand.ts`).
 3. **Relationship to existing LayerFlow code** — is this a fresh product, or does it extend an existing codebase and domain?
 4. **First outside users** — solo founders or small teams first? This decides how early invitations and roles need polish.
-5. **Sign-in methods at launch** — Google and GitHub only, or email and password as well?
+5. **Sign-in methods at launch** — decided: email and password, built-in administrator plus invited members (decision 14).

@@ -63,13 +63,13 @@ export default async function CommandCenter({ params }: PageProps<"/w/[workspace
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   const checklist = [
-    { done: products.length > 0, label: "Add your first product", href: `${base}/products/new` },
+    { done: products.length > 0, label: "Add your first project", href: `${base}/products/new` },
     { done: openTasks.length > 0 || myTasks.length > 0, label: "Create a task for something you're working on", href: `${base}/work?new=1` },
-    { done: products.some((p) => p.health !== "unknown"), label: "Give a product a health assessment", href: products[0] ? `${base}/products/${products[0].slug}/settings` : `${base}/products/new` },
+    { done: products.some((p) => p.health !== "unknown"), label: "Give a project a health assessment", href: products[0] ? `${base}/products/${products[0].slug}/settings` : `${base}/products/new` },
     ...(canFinance ? [{ done: renewals.length > 0, label: "Log a cost or renewal (hosting, domain, API)", href: `${base}/finance` }] : []),
     ...(can(ctx, "integration.manage") ? [{ done: growthConnected, label: "Connect Google Analytics or Search Console", href: `${base}/integrations` }] : []),
     ...(can(ctx, "content.publish") ? [{ done: pulse.some((r) => (r.content?.published ?? 0) > 0), label: "Publish a first blog post", href: `${base}/content/new` }] : []),
-    ...(can(ctx, "members.manage") ? [{ done: members.length > 1, label: "Invite a teammate or co-founder", href: `${base}/settings#members` }] : []),
+    ...(can(ctx, "members.manage") ? [{ done: members.length > 1, label: "Invite a teammate or co-founder", href: `${base}/team#invite` }] : []),
   ];
   const setupDone = checklist.every((c) => c.done);
 
@@ -82,7 +82,6 @@ export default async function CommandCenter({ params }: PageProps<"/w/[workspace
         actions={
           <>
             {canWork && <Link href={`${base}/work?new=1`} className="btn btn-secondary"><Plus className="size-4" /> Task</Link>}
-            {can(ctx, "product.create") && <Link href={`${base}/products/new`} className="btn btn-primary"><Plus className="size-4" /> Product</Link>}
           </>
         }
       />
@@ -103,7 +102,7 @@ export default async function CommandCenter({ params }: PageProps<"/w/[workspace
       )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Active products" value={products.length} hint={`${focus.length} in focus`} href={`${base}/products`} />
+        <Stat label="Active projects" value={products.length} hint={`${focus.length} in focus`} href={`${base}/products`} />
         <Stat label="Need attention" value={attention.length} hint={attention.length ? "See list below" : "All clear"} />
         <Stat label="Open tasks" value={canWork ? openTasks.length : "—"} hint={canWork ? `${overdue.length} overdue` : "No access"} href={canWork ? `${base}/work` : undefined} />
         {canFinance ? (
@@ -174,10 +173,10 @@ export default async function CommandCenter({ params }: PageProps<"/w/[workspace
                 ))}
               </ul>
             ) : (
-              <EmptyState compact title={products.length ? "Nothing needs attention" : "No products yet"}>
+              <EmptyState compact title={products.length ? "Nothing needs attention" : "No projects yet"}>
                 {products.length
                   ? "No overdue work, urgent bugs, missed reviews or imminent renewals."
-                  : "Add a product and this list will flag overdue work, urgent bugs, missing owners and upcoming renewals."}
+                  : "Add a project and this list will flag overdue work, urgent bugs, missing owners and upcoming renewals."}
               </EmptyState>
             )}
           </Panel>

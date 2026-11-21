@@ -50,7 +50,7 @@ export const revenueInput = z.object({
 async function assertRefs(ctx: Ctx, r: { productId?: string | null; ownerId?: string | null }) {
   if (r.productId) {
     const [p] = await db.select({ id: product.id }).from(product).where(and(eq(product.id, r.productId), eq(product.workspaceId, ctx.workspaceId)));
-    if (!p) throw invalid("Unknown product.", { productId: "Unknown product." });
+    if (!p) throw invalid("Unknown project.", { productId: "Unknown project." });
   }
   if (r.ownerId && !(await isMember(ctx.workspaceId, r.ownerId))) throw invalid("Owner must be a member.", { ownerId: "Not a member." });
 }

@@ -44,7 +44,7 @@ export function TaskDetail({
   ].sort((a, b) => a.at.localeCompare(b.at));
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="min-w-0">
         {editing ? (
           <ActionForm action={updateTaskAction.bind(null, slug, task.id)} onSuccess={() => setEditing(false)} className="panel space-y-4 p-5">
@@ -122,7 +122,7 @@ export function TaskDetail({
           {field("priority", "Priority", task.priority, TASK_PRIORITIES.map((s) => ({ value: s, label: taskLabel(s) })))}
           {field("type", "Type", task.type, TASK_TYPES.map((s) => ({ value: s, label: taskLabel(s) })))}
           {field("assigneeId", "Assignee", task.assigneeId ?? "", [{ value: "", label: "Unassigned" }, ...people.map((p) => ({ value: p.id, label: p.name }))])}
-          {field("productId", "Product", task.productId ?? "", [{ value: "", label: "No product" }, ...products.map((p) => ({ value: p.id, label: p.name }))])}
+          {field("productId", "Product", task.productId ?? "", [{ value: "", label: "No project" }, ...products.map((p) => ({ value: p.id, label: p.name }))])}
           <div className="flex items-center justify-between gap-2 py-1.5">
             <span className="text-[13px] text-muted">Due</span>
             {canEdit ? (

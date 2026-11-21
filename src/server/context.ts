@@ -6,8 +6,10 @@ import { ensureDb } from "./db";
 import { loadContext } from "../modules/identity/service";
 
 export const getSession = cache(async () => {
+  // Read the request headers first: it marks the page as dynamic, so `next build` never opens the database.
+  const h = await headers();
   await ensureDb();
-  return auth.api.getSession({ headers: await headers() });
+  return auth.api.getSession({ headers: h });
 });
 
 export async function requireUser() {

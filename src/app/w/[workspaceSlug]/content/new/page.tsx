@@ -21,8 +21,8 @@ export default async function NewPostPage({ params, searchParams }: PageProps<"/
   if (!products.length) {
     return (
       <div className="panel">
-        <EmptyState title="Add a product first" action={<Link href={`/w/${ctx.workspaceSlug}/products/new`} className="btn btn-primary">Add product</Link>}>
-          Every post belongs to a product, so its blog, SEO and analytics stay together.
+        <EmptyState title="Add a project first" action={<Link href={`/w/${ctx.workspaceSlug}/products/new`} className="btn btn-primary">Add project</Link>}>
+          Every post belongs to a project, so its blog, SEO and analytics stay together.
         </EmptyState>
       </div>
     );
@@ -34,7 +34,7 @@ export default async function NewPostPage({ params, searchParams }: PageProps<"/
       <div className="panel max-w-2xl p-5 sm:p-7">
         <ActionForm action={createPostAction.bind(null, ctx.workspaceSlug)} className="space-y-5">
           <div>
-            <label className="label" htmlFor="productId">Product</label>
+            <label className="label" htmlFor="productId">Project</label>
             <select id="productId" name="productId" className="input" defaultValue={pre} required>
               {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>

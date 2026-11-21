@@ -114,7 +114,7 @@ export function analyzeContent(input: AnalyzeInput): ContentAnalysis {
   add("length", "Content depth", 12, wordCount >= 800 ? "pass" : wordCount >= 400 ? "warn" : "fail", `${wordCount.toLocaleString("en-US")} words${wordCount < 800 ? " (aim for 800+ for a full answer)" : ""}.`);
   add("headings", "Scannable structure", 6, h2s.length >= 2 ? "pass" : h2s.length === 1 ? "warn" : "fail", `${h2s.length} section heading(s) (##).`);
   add("single_h1", "Single H1", 4, h1InBody ? "warn" : "pass", h1InBody ? "The title is already the H1; use ## for sections in the body." : "Body uses ## and below.");
-  add("links", "Links to related pages", 6, links >= 2 ? "pass" : links === 1 ? "warn" : "fail", `${links} link(s). Link to your product and to supporting sources.`);
+  add("links", "Links to related pages", 6, links >= 2 ? "pass" : links === 1 ? "warn" : "fail", `${links} link(s). Link to your project and to supporting sources.`);
   if (images.length) add("alt", "Image alt text", 3, imagesNoAlt ? "warn" : "pass", imagesNoAlt ? `${imagesNoAlt} image(s) without alt text.` : "All images have alt text.");
 
   // Readability
