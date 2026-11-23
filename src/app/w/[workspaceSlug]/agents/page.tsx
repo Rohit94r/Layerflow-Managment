@@ -31,7 +31,7 @@ export default async function AgentsPage({ params }: PageProps<"/w/[workspaceSlu
       {ctx.workspace.agentsPaused && <p className="mb-5 rounded-md border border-bad/40 bg-bad-soft px-4 py-2.5 text-[13.5px] text-bad">The agent kill switch is on. No agent will start until it is resumed.</p>}
       {!configured && (
         <p className="mb-5 rounded-md border border-warn/40 bg-warn-soft/60 px-4 py-2.5 text-[13px] text-warn">
-          Agents need <code className="font-mono">ANTHROPIC_API_KEY</code> on the server. You can install and configure them now; runs start once the key is set. Model: <code className="font-mono">{AGENT_MODEL()}</code>.
+          Agents need a model credential on the server: <code className="font-mono">ANTHROPIC_API_KEY</code> or <code className="font-mono">ANTHROPIC_AUTH_TOKEN</code>, or a compatible proxy via <code className="font-mono">AGENT_BASE_URL</code> (+ <code className="font-mono">AGENT_API_KEY</code>, unless <code className="font-mono">AGENT_NO_AUTH=1</code>). You can install and configure agents now; runs start once one of these is set. Model: <code className="font-mono">{AGENT_MODEL()}</code>.
         </p>
       )}
       <div className="space-y-6">

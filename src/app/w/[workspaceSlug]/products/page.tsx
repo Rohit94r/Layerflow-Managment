@@ -11,7 +11,7 @@ import { GroupManager } from "@/components/client/group-manager";
 import { EmptyState, HealthBadge, LifecycleBadge, NoAccess, PageHeader, ProductMark } from "@/components/ui";
 import { cn } from "@/lib/format";
 
-export const metadata = { title: "Projects" };
+export const metadata = { title: "Products" };
 
 const pick = <T extends string>(v: unknown, xs: readonly T[]) => (typeof v === "string" && (xs as readonly string[]).includes(v) ? (v as T) : undefined);
 const opts = (xs: readonly string[]) => xs.filter((x) => x !== "none").map((v) => ({ value: v, label: label(v) }));
@@ -52,13 +52,13 @@ export default async function PortfolioPage({ params, searchParams }: PageProps<
   return (
     <>
       <PageHeader
-        title="Projects"
-        description="Every project, its stage and what it needs."
+        title="Products"
+        description="Every product in this project, its stage and what it needs."
         actions={
           <>
             <GroupManager slug={ctx.workspaceSlug} groups={groups} canEdit={can(ctx, "product.edit")} />
             {can(ctx, "product.create") && (
-              <Link href={`${base}/products/new`} className="btn btn-primary"><Plus className="size-4" /> New project</Link>
+              <Link href={`${base}/products/new`} className="btn btn-primary"><Plus className="size-4" /> New product</Link>
             )}
           </>
         }

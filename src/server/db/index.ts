@@ -23,7 +23,9 @@ const MIGRATIONS = path.join(process.cwd(), "drizzle");
 function create(): State {
   const url = process.env.DATABASE_URL;
   if (url) {
-    const client = postgres(url, { max: 10, prepare: false });
+    // A serverless function is short-lived: one connection per instance keeps
+    // Neon's pooler from being exhausted when many lambdas scale up at once.
+    const client = postgres(url, { max: process.env.VERCEL ? 1 : 10, prepare: false });
     return { db: drizzlePostgres(client, { schema }) as unknown as Db, ready: null, kind: "postgres" };
   }
   // Serverless hosts have a read-only, per-instance filesystem: the embedded database cannot work there.
@@ -47,8 +49,13 @@ export function installDb(db: Db) {
   globalForDb.__productOsDb = { db, ready: Promise.resolve(), kind: "pglite" };
 }
 
-/** Applies pending migrations once per process. Safe to call on every request. */
+/**
+ * Applies pending migrations once per process. Safe to call on every request.
+ * On Vercel the migrations already ran in the build step (`pnpm db:migrate`),
+ * so each serverless invocation must not try to migrate a shared database.
+ */
 export function ensureDb(): Promise<void> {
+  if (process.env.VERCEL) return Promise.resolve();
   const s = state();
   s.ready ??= (async () => {
     if (s.kind === "pglite") await migratePglite(s.db, { migrationsFolder: MIGRATIONS });

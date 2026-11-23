@@ -7,9 +7,14 @@ export async function register() {
       if (required.length) console.error(`[config] Missing required environment variables: ${required.join(", ")}. See .env.example.`);
       if (recommended.length) console.warn(`[config] Recommended environment variables not set: ${recommended.join(", ")}.`);
     }
-    const { ensureDb } = await import("./server/db");
-    await ensureDb();
-    // Create or repair the built-in administrator account (src/server/auth/admin.ts).
+    // Migrations run once at deploy time via `vercel.json` buildCommand. Running
+    // them from every serverless cold start would race across lambda instances.
+    if (!process.env.VERCEL) {
+      const { ensureDb } = await import("./server/db");
+      await ensureDb();
+    }
+    // Safe no-op unless ADMIN_EMAIL/ADMIN_PASSWORD are configured. Never resets
+    // an existing password in production (see src/modules/identity/service.ts).
     const { ensureAdminAccount } = await import("./modules/identity/service");
     await ensureAdminAccount().catch((err) => console.error("[admin] Could not prepare the administrator account:", err));
   }

@@ -7,17 +7,20 @@ import { product } from "../modules/portfolio/schema";
 import { agentInstance, agentRun, agentRunStep } from "../modules/agents/schema";
 import { notify } from "../modules/automation/inbox";
 import { recordAudit } from "../modules/audit/service";
-import { AGENT_MODEL, agentDef, costMicros, finishInstruction, type AgentDefinition } from "./catalog";
+import { agentApiConfig, agentDef, costMicros, finishInstruction, type AgentDefinition } from "./catalog";
 import { TOOLS, authorizeTool, type ToolEnv } from "./tools";
 
 const MAX_TURNS = 12;
-const RUN_TIMEOUT_MS = 6 * 60 * 1000;
+// Keep the model call shorter than the 300s Vercel cron limit so a run can be
+// recorded as timed out instead of being killed mid-flight and left "running".
+const RUN_TIMEOUT_MS = 4 * 60 * 1000;
 
 const redact = (v: unknown) => {
   const s = JSON.stringify(v ?? null);
   const clean = s.replace(/(sk-ant-[\w-]+|ya29\.[\w.-]+|Bearer\s+[\w.-]+)/g, "[redacted]");
   return clean.length > 4000 ? JSON.parse(JSON.stringify({ truncated: true, preview: clean.slice(0, 4000) })) : JSON.parse(clean);
 };
+const redactText = (s: string) => String(redact(s));
 
 async function addStep(runId: string, workspaceId: string, seq: number, s: Omit<typeof agentRunStep.$inferInsert, "runId" | "workspaceId" | "seq">) {
   await db.insert(agentRunStep).values({ ...s, runId, workspaceId, seq });
@@ -72,8 +75,13 @@ export async function executeRun(runId: string, ctx: Ctx) {
   const def = inst && agentDef(inst.agentKey);
   let seq = 0;
   const fail = async (status: "failed" | "timed_out" | "cancelled", error: string) => {
-    await db.update(agentRun).set({ status, error, currentStep: null, finishedAt: new Date() }).where(eq(agentRun.id, runId));
-    await addStep(runId, run.workspaceId, seq++, { kind: "error", name: status, summary: error, status: "error" });
+    try {
+      await db.update(agentRun).set({ status, error, currentStep: null, finishedAt: new Date() }).where(eq(agentRun.id, runId));
+      await addStep(runId, run.workspaceId, seq++, { kind: "error", name: status, summary: error, status: "error" });
+    } catch (e) {
+      // executeRun promises never to throw, even if recording the failure fails.
+      console.error(`[agent] Could not record ${status} for run ${runId}:`, e);
+    }
   };
   if (!inst || !def) return fail("failed", "Agent not found.");
 
@@ -92,8 +100,17 @@ export async function executeRun(runId: string, ctx: Ctx) {
   const enabled = TOOLS.filter((t) => inst.allowedTools.includes(t.name));
   const tools: Anthropic.Beta.BetaTool[] = enabled.map((t) => ({ name: t.name, description: t.description, input_schema: t.jsonSchema as Anthropic.Beta.BetaTool.InputSchema }));
 
-  const client = new Anthropic();
-  const model = AGENT_MODEL();
+  const api = agentApiConfig();
+  const client = new Anthropic({
+    // The SDK requires a credential even when the proxy does not check it.
+    apiKey: api.apiKey ?? (api.authToken ? undefined : "not-required"),
+    authToken: api.authToken,
+    baseURL: api.baseURL,
+    timeout: RUN_TIMEOUT_MS,
+    maxRetries: 1,
+  });
+  const model = api.model;
+  const instructions = inst.instructions.trim() || def.defaultInstructions || "";
   const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: "user", content: `${def.task}${scopeName ? ` Limit yourself to ${scopeName.name}.` : ""}` }];
   await db.update(agentRun).set({ status: "running", model, currentStep: "Thinking" }).where(eq(agentRun.id, runId));
   const started = Date.now();
@@ -113,21 +130,28 @@ export async function executeRun(runId: string, ctx: Ctx) {
         return fail("cancelled", "Monthly budget reached; agent paused.");
       }
 
-      const response = await client.beta.messages.create({
+      const request: Anthropic.Beta.MessageCreateParamsNonStreaming = {
         model,
         max_tokens: 16000,
-        system: systemPrompt(inst.name, scope, inst.instructions, def),
+        system: systemPrompt(inst.name, scope, instructions, def),
         tools,
         messages,
-        output_config: { effort: "medium" },
-        // On a safety decline the API retries on a fallback model inside the same call.
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-      });
+      };
+      if (api.isAnthropic) {
+        // Beta-only options. Anthropic-compatible proxies (LiteLLM/Ollama/etc.)
+        // reject them, so send them only when talking to Anthropic directly.
+        request.output_config = { effort: "medium" };
+        request.betas = ["server-side-fallback-2026-07-01"];
+        request.fallbacks = "default";
+      }
+      const response = await client.beta.messages.create(request);
       input += response.usage.input_tokens + (response.usage.cache_read_input_tokens ?? 0) + (response.usage.cache_creation_input_tokens ?? 0);
       output += response.usage.output_tokens;
-      cost += costMicros(response.model, response.usage.input_tokens + (response.usage.cache_creation_input_tokens ?? 0), response.usage.output_tokens)
-        + Math.round((response.usage.cache_read_input_tokens ?? 0) * 0.05); // cache reads are billed at a small fraction
+      // Cache writes cost 1.25x input; reads about 0.1x. Applied as increments
+      // on top of the base input price so budgets pause at the right time.
+      cost += costMicros(response.model, response.usage.input_tokens, response.usage.output_tokens)
+        + costMicros(response.model, Math.round((response.usage.cache_creation_input_tokens ?? 0) * 0.25), 0)
+        + costMicros(response.model, Math.round((response.usage.cache_read_input_tokens ?? 0) * 0.1), 0);
       await db.update(agentRun).set({ inputTokens: input, outputTokens: output, costMicros: cost, model: response.model }).where(eq(agentRun.id, runId));
 
       if (response.stop_reason === "refusal") {
@@ -136,10 +160,11 @@ export async function executeRun(runId: string, ctx: Ctx) {
 
       const text = response.content.filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text").map((b) => b.text).join("\n").trim();
       const calls = response.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
-      if (text) finalText = text;
+      if (text) finalText = redactText(text);
+      const truncatedNote = response.stop_reason === "max_tokens" ? " (output limit reached)" : "";
       // Visible action summaries only; thinking is never stored or shown.
       await addStep(runId, run.workspaceId, seq++, {
-        kind: "model", name: response.model, summary: text ? text.slice(0, 600) : calls.length ? `Decided to call ${calls.map((c) => c.name).join(", ")}` : "No output",
+        kind: "model", name: response.model, summary: text ? redactText(text.slice(0, 600)) + truncatedNote : calls.length ? `Decided to call ${calls.map((c) => c.name).join(", ")}` : `No output${truncatedNote}`,
         output: { stop_reason: response.stop_reason, input_tokens: response.usage.input_tokens, output_tokens: response.usage.output_tokens },
       });
 
@@ -186,7 +211,7 @@ export async function executeRun(runId: string, ctx: Ctx) {
     await db.update(agentInstance).set({ lastRunAt: new Date() }).where(eq(agentInstance.id, inst.id));
     await db.transaction((tx) => recordAudit(tx, env.ctx, { action: "agent.run_completed", targetType: "agent", targetId: inst.id, targetLabel: `${inst.name} · $${(cost / 1e6).toFixed(3)}`, productId: inst.productId, actorType: "agent" }));
   } catch (e) {
-    const msg = e instanceof Anthropic.AuthenticationError ? "Anthropic API key is missing or invalid (ANTHROPIC_API_KEY)."
+    const msg = e instanceof Anthropic.AuthenticationError ? "Model provider rejected the credential. Check ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN / AGENT_API_KEY (or AGENT_NO_AUTH for a local proxy)."
       : e instanceof Anthropic.RateLimitError ? "Rate limited by the model provider. Try again shortly."
       : e instanceof Anthropic.APIError ? `Model API error ${e.status}: ${e.message}`
       : e instanceof Error ? e.message : "Run failed";

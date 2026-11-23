@@ -17,7 +17,7 @@ export default async function SettingsPage({ params }: PageProps<"/w/[workspaceS
     <>
       <PageHeader title="Settings" description={`You are ${ROLE_LABELS[ctx.role].toLowerCase() === "owner" ? "an owner" : `a ${ROLE_LABELS[ctx.role].toLowerCase()}`} of ${ctx.workspace.name}.`} />
       <div className="space-y-6">
-        <Panel title="Workspace">
+        <Panel title="Project">
           <WorkspaceSettingsForm slug={slug} ws={ctx.workspace} canEdit={can(ctx, "workspace.manage")} />
         </Panel>
 
@@ -42,7 +42,7 @@ export default async function SettingsPage({ params }: PageProps<"/w/[workspaceS
         {can(ctx, "data.export") && (
           <Panel title="Export">
             <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center">
-              <p className="flex-1 text-[13.5px] text-ink-2">Download everything in this workspace as JSON: projects, tasks, comments, docs, finance and the full activity log. Your data is never locked in.</p>
+              <p className="flex-1 text-[13.5px] text-ink-2">Download everything in this project as JSON: products, tasks, comments, docs, finance and the full activity log. Your data is never locked in.</p>
               <a href={`/api/w/${slug}/export`} className="btn btn-secondary" download>
                 <Download className="size-4" /> Export JSON
               </a>
@@ -51,10 +51,10 @@ export default async function SettingsPage({ params }: PageProps<"/w/[workspaceS
         )}
 
         {can(ctx, "workspace.delete") && (
-          <Panel title="Delete workspace" className="border-bad/40">
+          <Panel title="Delete project" className="border-bad/40">
             <div className="space-y-3 px-4 py-4">
               <p className="text-[13.5px] text-ink-2">
-                Permanently deletes the workspace and everything in it for every member. Export first if you may need the data. This can&apos;t be undone.
+                Permanently deletes the project and everything in it for every member. Export first if you may need the data. This can&apos;t be undone.
               </p>
               <DeleteWorkspaceForm slug={slug} />
             </div>

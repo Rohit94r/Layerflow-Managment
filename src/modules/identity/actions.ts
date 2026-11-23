@@ -9,14 +9,15 @@ import type { Role } from "./constants";
 import * as svc from "./service";
 
 export async function createWorkspaceAction(_prev: ActionResult | null, fd: FormData): Promise<ActionResult> {
-  let slug = "";
+  let href = "/onboarding";
   const res = await run(async () => {
     const session = await getSession();
     if (!session) return { ok: false, error: "Please sign in again." };
     const ws = await svc.createWorkspace(session.user.id, formObject(fd) as never);
-    slug = ws.slug;
+    const productSlug = await svc.ensureProjectInWorkspace(session.user, ws.slug);
+    href = `/w/${ws.slug}/products/${productSlug}`;
   });
-  if (res.ok) redirect(`/w/${slug}`);
+  if (res.ok) redirect(href);
   return res;
 }
 
@@ -25,7 +26,7 @@ export async function updateWorkspaceAction(slug: string, _prev: ActionResult | 
   const res = await withCtx(slug, async (ctx) => {
     const ws = await svc.updateWorkspace(ctx, formObject(fd) as never);
     newSlug = ws.slug;
-    return { ok: true, message: "Workspace saved." };
+    return { ok: true, message: "Project saved." };
   });
   if (res.ok && newSlug !== slug) redirect(`/w/${newSlug}/settings`);
   revalidatePath(`/w/${slug}`, "layout");

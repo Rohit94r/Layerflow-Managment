@@ -11,6 +11,7 @@ import { newId, newToken } from "../../lib/id";
 import { recordAudit } from "../audit/service";
 import { INVITABLE_ROLES, RESERVED_SLUGS, ROLES, type Role } from "./constants";
 import { account, invitation, user, workspace, workspaceMember } from "./schema";
+import { product } from "../portfolio/schema";
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 const INVITE_TTL_DAYS = 7;
@@ -27,6 +28,10 @@ async function adminUserId(): Promise<string | null> {
  * one if it differs, and makes it an owner of every workspace. Idempotent; runs on every server start.
  */
 export async function ensureAdminAccount() {
+  // Without configured credentials (production default) do not create a
+  // well-known account. Local development and tests use the documented defaults.
+  if (!ADMIN.configured) return null;
+
   let id = await adminUserId();
   if (!id) {
     await db.insert(user).values({ id: newId(), name: ADMIN.name, email: ADMIN.email, emailVerified: true }).onConflictDoNothing();
@@ -39,12 +44,13 @@ export async function ensureAdminAccount() {
     .from(account)
     .where(and(eq(account.userId, id), eq(account.providerId, "credential")))
     .limit(1);
+  const resetPassword = process.env.ADMIN_RESET_PASSWORD === "1" || process.env.NODE_ENV !== "production";
   if (!cred) {
     await db
       .insert(account)
       .values({ id: `credential-${id}`, accountId: id, providerId: "credential", userId: id, password: await hashPassword(ADMIN.password) })
       .onConflictDoNothing();
-  } else if (!cred.password || !(await verifyPassword({ hash: cred.password, password: ADMIN.password }))) {
+  } else if (resetPassword && (!cred.password || !(await verifyPassword({ hash: cred.password, password: ADMIN.password })))) {
     await db.update(account).set({ password: await hashPassword(ADMIN.password), updatedAt: new Date() }).where(eq(account.id, cred.id));
   }
 
@@ -165,8 +171,42 @@ export async function ensureFirstWorkspace(user: { id: string; name: string }) {
   const [existing] = await listUserWorkspaces(user.id);
   if (existing) return existing.slug;
   const first = user.name.trim().split(/\s+/)[0] || "My";
-  const ws = await createWorkspace(user.id, { name: `${first}'s projects`.slice(0, 80) });
+  const ws = await createWorkspace(user.id, { name: `${first}'s project`.slice(0, 80) });
   return ws.slug;
+}
+
+/**
+ * Projects are the top-level thing a user works in: there is no organisation
+ * setup step. This makes sure a brand-new account lands straight inside a real
+ * project (and existing accounts keep the project they already use).
+ */
+export async function ensureProjectInWorkspace(user: { id: string; name: string }, workspaceSlug: string): Promise<string> {
+  const ctx = await loadContext(user.id, workspaceSlug);
+  if (!ctx) throw notFound("Project");
+
+  const [existing] = await db.select({ slug: product.slug }).from(product).where(eq(product.workspaceId, ctx.workspaceId)).limit(1);
+  if (existing) return existing.slug;
+
+  const first = user.name.trim().split(/\s+/)[0] || "My";
+  const name = `${first}'s first project`.slice(0, 80);
+  const slug = (slugify(name) || "my-first-project").slice(0, 100);
+  await db
+    .insert(product)
+    .values({ workspaceId: ctx.workspaceId, name, slug, createdBy: user.id, ownerId: user.id })
+    .onConflictDoNothing();
+  const [created] = await db.select({ slug: product.slug }).from(product).where(eq(product.workspaceId, ctx.workspaceId)).limit(1);
+  return created?.slug ?? slug;
+}
+
+export async function ensureFirstProject(user: { id: string; name: string }): Promise<{ workspaceSlug: string; productSlug: string }> {
+  const workspaceSlug = await ensureFirstWorkspace(user);
+  return { workspaceSlug, productSlug: await ensureProjectInWorkspace(user, workspaceSlug) };
+}
+
+/** The URL a user should land on after sign-in: directly in their project. */
+export async function homeForUser(user: { id: string; name: string }) {
+  const { workspaceSlug, productSlug } = await ensureFirstProject(user);
+  return `/w/${workspaceSlug}/products/${productSlug}`;
 }
 
 export async function updateWorkspace(ctx: Ctx, raw: z.input<typeof workspaceInput>) {

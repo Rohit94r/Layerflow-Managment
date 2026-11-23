@@ -7,7 +7,7 @@ import { dueConnections, syncConnection } from "@/modules/integrations/service";
 import { checkUptime, productsWithSites } from "@/modules/seo/service";
 import { runScheduledAutomations } from "@/modules/automation/service";
 import { publishDuePosts } from "@/modules/content/service";
-import { createRun, dueAgents } from "@/modules/agents/service";
+import { createRun, dueAgents, reapStaleRuns } from "@/modules/agents/service";
 import { executeRun } from "@/ai/runtime";
 import { workspace, workspaceMember } from "@/modules/identity/schema";
 
@@ -59,20 +59,25 @@ export async function GET(req: Request) {
   }
 
   try {
+    const recovered = await reapStaleRuns();
     const agents = await dueAgents();
     let started = 0;
+    const errors: string[] = [];
     for (const a of agents) {
-      const [ws] = await db.select().from(workspace).where(eq(workspace.id, a.workspaceId));
-      const [m] = await db.select().from(workspaceMember).where(and(eq(workspaceMember.workspaceId, a.workspaceId), eq(workspaceMember.userId, a.ownerId ?? "")));
-      if (!ws || !m) continue;
-      const ctx = { workspaceId: ws.id, workspaceSlug: ws.slug, userId: m.userId, role: m.role };
-      const run = await createRun(ctx, a.id, "schedule").catch(() => null);
-      if (run) {
+      // One broken agent must not stop the rest of the schedule.
+      try {
+        const [ws] = await db.select().from(workspace).where(eq(workspace.id, a.workspaceId));
+        const [m] = await db.select().from(workspaceMember).where(and(eq(workspaceMember.workspaceId, a.workspaceId), eq(workspaceMember.userId, a.ownerId ?? "")));
+        if (!ws || !m) continue;
+        const ctx = { workspaceId: ws.id, workspaceSlug: ws.slug, userId: m.userId, role: m.role };
+        const run = await createRun(ctx, a.id, "schedule");
         await executeRun(run.id, ctx);
         started++;
+      } catch (e) {
+        errors.push(`${a.name}: ${e instanceof Error ? e.message : "failed"}`);
       }
     }
-    report.agents = { due: agents.length, ran: started };
+    report.agents = { due: agents.length, ran: started, recovered, errors };
   } catch (e) {
     report.agents = { error: e instanceof Error ? e.message : "failed" };
   }

@@ -20,9 +20,9 @@ With `DATABASE_URL` empty, an embedded Postgres (PGlite) is created in `.data/` 
 
 ## Signing in
 
-- **Administrator:** `rjdhav67@gmail.com`, password set in [src/server/auth/admin.ts](src/server/auth/admin.ts). On every server start the account is created if missing, its password is reset to that value, and it is made an owner of every workspace. Its role can't be changed or removed by other members. Change the email or password in that file and restart (or redeploy).
+- **Administrator:** set `ADMIN_EMAIL`, `ADMIN_PASSWORD` and `ADMIN_NAME` in the environment. The account is created on first start if missing and made an owner of every project. Its role can't be changed or removed by other members. In production an existing password is never overwritten unless `ADMIN_RESET_PASSWORD=1` is set for one deploy. Local development uses the documented defaults in [src/server/auth/admin.ts](src/server/auth/admin.ts).
 - **Everyone else:** sign-up is by invitation only. **Invite member** (top bar) or **Team** → Create invite gives a one-time link; only the invited email can create an account with it.
-- **No setup step:** after signing in you land in your workspace (created automatically as "<first name>'s projects", renamable in Settings). Use **Add project** at the top of any page to add projects; all of them are listed under **Projects**.
+- **No setup step:** after signing in you land directly in a project (created automatically as "<first name>'s project", renamable in Settings). Use **Add project** in the top bar to create another top-level project. Switching projects in the top bar keeps you on the same page — inbox, work, integrations, automations and every other feature belong to the selected project. Products inside a project are listed under **Products**.
 
 ## Deploy on Vercel
 
@@ -39,7 +39,8 @@ Every variable the app reads. Nothing else is needed: the Vercel connection uses
 
 | Variable | Local (`.env.local`) | Production (Vercel) | What it is and where to get it |
 |---|---|---|---|
-| `DATABASE_URL` | Leave empty (embedded database in `.data/`) | **Required** | Postgres connection string. Neon: Vercel → Storage → Neon, or neon.tech → Connection details → **Pooled** connection. The deploy stops with a clear message if it's missing. |
+| `DATABASE_URL` | Leave empty (embedded database in `.data/`) | **Required** | Postgres connection string. Neon: Vercel → Storage → Neon, or neon.tech → Connection details → **Pooled** connection. The deploy stops with a clear message if it's missing. Migrations are applied by the build command. |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | Optional (dev defaults) | **Required** | Built-in administrator credentials. If the email or password is missing in production, no administrator account is created. |
 | `BETTER_AUTH_SECRET` | Any value | **Required** | Signs sign-in sessions. `openssl rand -base64 32`. Changing it signs everyone out. |
 | `TOKEN_ENCRYPTION_KEY` | Optional | **Required** | Encrypts the Google and Vercel tokens and webhook secrets in the database. Exactly 32 random bytes, base64: `openssl rand -base64 32`. **Never change it after connecting integrations**: stored tokens become unreadable and must be reconnected. |
 | `BETTER_AUTH_URL` | `http://localhost:3000` | Recommended | The app's public `https://` address. Used for sign-in, invite links, Google redirect URIs, the Vercel webhook URL and hosted blog links. If unset on Vercel, the production domain is used. |

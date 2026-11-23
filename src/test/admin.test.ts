@@ -17,7 +17,7 @@ describe("built-in administrator", () => {
     await freshDb();
     // A workspace that exists before the administrator account does.
     existing = await makeOwner("Erin");
-    adminId = await identity.ensureAdminAccount();
+    adminId = (await identity.ensureAdminAccount())!;
   });
 
   it("can sign in with the configured email and password", async () => {
@@ -106,6 +106,6 @@ describe("first workspace", () => {
     expect(await identity.ensureFirstWorkspace({ id: u.id, name: "Rohit Jadhav" })).toBe(slug);
     const mine = await identity.listUserWorkspaces(u.id);
     expect(mine).toHaveLength(1);
-    expect(mine[0]).toMatchObject({ name: "Rohit's projects", role: "owner", slug });
+    expect(mine[0]).toMatchObject({ name: "Rohit's project", role: "owner", slug });
   });
 });

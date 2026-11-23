@@ -87,7 +87,7 @@ export function MembersTable({ slug, members, me, myRole, canManage }: { slug: s
                     <ConfirmButton
                       onConfirm={() => removeMemberAction(slug, m.id, self)}
                       className="btn btn-ghost btn-sm text-bad"
-                      confirmLabel={self ? "Leave workspace?" : "Remove?"}
+                      confirmLabel={self ? "Leave project?" : "Remove?"}
                     >
                       {self ? "Leave" : <Trash2 className="size-3.5" />}
                     </ConfirmButton>
@@ -158,8 +158,8 @@ export function InviteForm({ slug, invitations }: { slug: string; invitations: {
 export function DeleteWorkspaceForm({ slug }: { slug: string }) {
   return (
     <ActionForm action={deleteWorkspaceAction.bind(null, slug)} className="flex flex-col gap-2 sm:flex-row">
-      <input name="confirm" className="input font-mono text-[13px]" placeholder={`Type ${slug} to confirm`} aria-label="Confirm workspace address" required />
-      <button type="submit" className="btn btn-danger shrink-0">Delete workspace</button>
+      <input name="confirm" className="input font-mono text-[13px]" placeholder={`Type ${slug} to confirm`} aria-label="Confirm project address" required />
+      <button type="submit" className="btn btn-danger shrink-0">Delete project</button>
     </ActionForm>
   );
 }

@@ -136,9 +136,37 @@ const PRICES: Record<string, [number, number]> = {
 };
 
 export function costMicros(model: string, input: number, output: number) {
-  const [i, o] = PRICES[model] ?? [8, 40]; // unknown model: price conservatively
+  // Custom providers (Ollama, Gemini via a proxy, etc.) bill outside this app:
+  // do not charge them at Anthropic's conservative unknown-model rate, which
+  // would pause a free agent after a handful of runs.
+  if (!model.startsWith("claude-")) return 0;
+  const [i, o] = PRICES[model] ?? [8, 40]; // unknown Anthropic model: price conservatively
   return Math.round(input * i + output * o); // tokens × $/MTok = micro-dollars
 }
 
-export const AGENT_MODEL = () => process.env.AGENT_MODEL || "claude-opus-5-5";
-export const agentsConfigured = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+export const AGENT_MODEL = () => process.env.AGENT_MODEL?.trim() || "claude-sonnet-5-5";
+
+/**
+ * Credentials and endpoint are deliberately flexible so agents can run against
+ * Anthropic directly, an Anthropic-compatible proxy (LiteLLM, Ollama, a free
+ * Gemini/Groq backend) or an SDK credential chain (auth token / profile).
+ */
+export function agentApiConfig() {
+  const apiKey = process.env.AGENT_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim();
+  const authToken = process.env.ANTHROPIC_AUTH_TOKEN?.trim();
+  const baseURL = process.env.AGENT_BASE_URL?.trim() || process.env.ANTHROPIC_BASE_URL?.trim();
+  let isAnthropic = !baseURL;
+  if (baseURL) {
+    try {
+      isAnthropic = new URL(baseURL).hostname.endsWith("anthropic.com");
+    } catch {
+      isAnthropic = false;
+    }
+  }
+  return { apiKey, authToken, baseURL, model: AGENT_MODEL(), isAnthropic };
+}
+
+export const agentsConfigured = () => {
+  const c = agentApiConfig();
+  return Boolean(c.apiKey || c.authToken || (c.baseURL && process.env.AGENT_NO_AUTH === "1"));
+};

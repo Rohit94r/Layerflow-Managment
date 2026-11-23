@@ -66,7 +66,7 @@ export function AgentButtons({ slug, id, status, canManage, canRun, runnable }: 
   return (
     <div className="flex flex-wrap gap-1.5">
       {canRun && status === "active" && (
-        <ActionButton onClick={() => runAgentAction(slug, id)} className="btn btn-primary btn-sm" title={runnable ? undefined : "Set ANTHROPIC_API_KEY on the server"}>
+        <ActionButton onClick={() => runAgentAction(slug, id)} className="btn btn-primary btn-sm" disabled={!runnable} title={runnable ? undefined : "Configure a model credential on the server first (ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, or AGENT_BASE_URL)"}>
           <Play className="size-3.5" /> Run now
         </ActionButton>
       )}

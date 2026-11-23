@@ -18,7 +18,7 @@ export function WorkspaceForm() {
   return (
     <ActionForm action={createWorkspaceAction} className="space-y-4">
       <div>
-        <label className="label" htmlFor="name">Workspace name</label>
+        <label className="label" htmlFor="name">Project name</label>
         <input id="name" name="name" className="input" placeholder="e.g. Acme Labs" required maxLength={80} autoFocus />
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -35,7 +35,7 @@ export function WorkspaceForm() {
           <input ref={tzRef} id="timezone" name="timezone" className="input" defaultValue="UTC" />
         </div>
       </div>
-      <SubmitButton className="h-10 w-full">Create workspace</SubmitButton>
+      <SubmitButton className="h-10 w-full">Create project</SubmitButton>
     </ActionForm>
   );
 }

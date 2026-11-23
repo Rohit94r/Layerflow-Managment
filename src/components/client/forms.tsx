@@ -208,16 +208,18 @@ export function ActionButton({
   className = "btn btn-secondary btn-sm",
   successMessage,
   title,
+  disabled,
 }: {
   onClick: () => Promise<ActionResult | undefined | void>;
   children: React.ReactNode;
   className?: string;
   successMessage?: string;
   title?: string;
+  disabled?: boolean;
 }) {
   const { pending, exec } = useAction();
   return (
-    <button type="button" title={title} aria-label={title} className={className} disabled={pending} onClick={() => exec(onClick, successMessage)}>
+    <button type="button" title={title} aria-label={title} className={cn(className, disabled && "pointer-events-none opacity-50")} disabled={pending || disabled} onClick={() => exec(onClick, successMessage)}>
       {pending ? <Loader2 className="size-3.5 animate-spin" /> : null}
       {children}
     </button>

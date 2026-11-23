@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../../server/db";
 import { assertCan, type Ctx } from "../../server/permissions";
@@ -11,7 +11,13 @@ import { TOOLS } from "../../ai/tools";
 import { agentInstance, agentRun, agentRunStep } from "./schema";
 
 export function catalog() {
-  return AGENT_CATALOG.map((a) => ({ ...a, tools: [...a.defaultTools, ...a.optionalTools].map((n) => TOOLS.find((t) => t.name === n)!).map((t) => ({ name: t.name, level: t.level, description: t.description })) }));
+  return AGENT_CATALOG.map((a) => ({
+    ...a,
+    tools: [...a.defaultTools, ...a.optionalTools]
+      .map((n) => TOOLS.find((t) => t.name === n))
+      .filter((t): t is NonNullable<typeof t> => Boolean(t))
+      .map((t) => ({ name: t.name, level: t.level, description: t.description })),
+  }));
 }
 
 const configInput = z.object({
@@ -137,11 +143,28 @@ export async function getRun(ctx: Ctx, runId: string) {
   return { ...r, steps };
 }
 
+/**
+ * A serverless invocation can be terminated mid-run, leaving a run stuck in
+ * `queued`/`running` and blocking that agent forever. Recover those runs before
+ * starting another one.
+ */
+export async function reapStaleRuns(maxAgeMs = 15 * 60 * 1000) {
+  const cutoff = new Date(Date.now() - maxAgeMs);
+  const stale = await db.select({ id: agentRun.id }).from(agentRun)
+    .where(and(inArray(agentRun.status, ["queued", "running"]), lt(agentRun.startedAt, cutoff)));
+  if (!stale.length) return 0;
+  await db.update(agentRun)
+    .set({ status: "failed", error: "Run was interrupted by the host and recovered.", currentStep: null, finishedAt: new Date() })
+    .where(inArray(agentRun.id, stale.map((r) => r.id)));
+  return stale.length;
+}
+
 /** Creates a queued run. The caller schedules execution (after the response) via `executeRun`. */
 export async function createRun(ctx: Ctx, instanceId: string, trigger: "manual" | "schedule") {
   if (trigger === "manual") assertCan(ctx, "agent.run");
   const a = await owned(ctx, instanceId);
-  if (!agentsConfigured()) throw invalid("Agents need ANTHROPIC_API_KEY set on the server.");
+  if (!agentsConfigured()) throw invalid("Agents are not configured on the server. Set ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, or a proxy via AGENT_BASE_URL (plus AGENT_API_KEY / AGENT_NO_AUTH).");
+  await reapStaleRuns();
   if (a.status !== "active") throw invalid(`This agent is ${a.status}. Resume it first.`);
   const [ws] = await db.select({ paused: workspace.agentsPaused }).from(workspace).where(eq(workspace.id, ctx.workspaceId));
   if (ws?.paused) throw invalid("The workspace agent kill switch is on.");
